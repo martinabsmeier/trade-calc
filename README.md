@@ -107,6 +107,9 @@ mvn test       # Unit tests only
 mvn verify     # Unit + Integration + Coverage report (target/site/jacoco/)
 ```
 
+> Current unit-test count: **65** across the domain, config, service and
+> dataprovider packages (no Spring context required).
+
 ### Test Strategy
 
 - **Unit tests** (`*Test`) exercise isolated logic: records, enums, properties binding,
@@ -151,6 +154,8 @@ trade-calc/
     │   │   ├── dataprovider/                # API adapter (Phase 3)
     │   │   ├── repository/                  # In-memory indexes (Phase 2+)
     │   │   ├── service/                     # Application logic (Phase 5+)
+    │   │   │   ├── ProfitCalculationService.java    # Strategy dispatch (Phase 5)
+    │   │   │   └── calculator/             # Profit strategies (Phase 5)
     │   │   ├── domain/                      # Records / enums (Phase 2)
     │   │   └── exception/                   # Error handling (Phase 7)
     │   └── resources/
@@ -172,7 +177,7 @@ trade-calc/
 | 2 | Static data (domain records, JSON recipes, CityBonusRepository) | ✅ |
 | 3 | External API (AlbionDataApiClient + MarketJsonMapper) | ✅ |
 | 4 | Refresh & Actuator stats | ✅ |
-| 5 | Core calculation (ProfitCalculationService) | ⏳ |
+| 5 | Core calculation (ProfitCalculationService — Strategy pattern) | ✅ |
 | 6 | Crafting plan (CraftingPlanService) | ⏳ |
 | 7 | REST-API for calculation | ⏳ |
 | 8 | Web UI (Thymeleaf + HTMX) | ⏳ |
@@ -285,7 +290,16 @@ de.am.albion.tradecalc
 │
 ├── service/                           # Application logic
 │   ├── PriceService.java               # Market data
-│   └── RecipeService.java              # Recipe lookup
+│   ├── RecipeService.java              # Recipe lookup
+│   ├── ProfitCalculationService.java   # Strategy dispatch (Phase 5)
+│   └── calculator/                     # Profit strategies (Phase 5)
+│       ├── ProfitStrategy.java         # Interface — one impl per CalculationMode
+│       ├── PriceLookup.java            # Read-only view on PriceService
+│       ├── CityBonusProvider.java      # Read-only view on CityBonusRepository
+│       ├── AbstractProfitStrategy.java  # Shared arithmetic
+│       ├── LocalOnlyStrategy.java       # Mode (a)
+│       ├── LocalBuyBestRestStrategy.java   # Mode (b)
+│       └── BestOfAllStrategy.java      # Mode (c)
 │
 └── domain/                            # Framework-agnostic records / POJOs
     ├── CalculationMode.java            # Enum
@@ -357,12 +371,42 @@ call returns in single-digit ms.
 
 *Verify:* `/actuator/caches/marketPrices` shows size and hit rate.
 
-#### Phase 5 — Core calculation *(next)*
-- `service/ProfitCalculationService` as a strategy per `CalculationMode`
-- Pure calculation methods, testable without Spring
-- Unit tests per mode with fixed prices → deterministic expected values
+#### Phase 5 — Core calculation ✅
+- `service/ProfitCalculationService` dispatches per `CalculationMode` via an
+  `EnumMap` populated from the Spring-injected `ProfitStrategy` beans.
+- One `@Component` per mode in `service/calculator/`: `LocalOnlyStrategy`,
+  `LocalBuyBestRestStrategy`, `BestOfAllStrategy`. They share the arithmetic
+  in `AbstractProfitStrategy` and only decide which cities to use for buying
+  and crafting.
+- Adding a new mode = adding a new strategy class — no changes to the service.
+- `PriceServiceAdapter` and `CityBonusRepositoryAdapter` are the only places
+  that know about Spring wiring on the calculator side.
+- `ProfitStrategy`, `PriceLookup`, `CityBonusProvider` are pure interfaces so
+  the strategies are unit-testable without any DI context.
 
-*Verify:* `T4_BOW` with mode (c) yields the known profit from the worked example.
+*Verify:* `mvn test` runs all strategy unit tests with deterministic prices
+against a builder-driven stub. Adding a fourth mode without registering a
+strategy fails fast at service construction.
+
+**Worked example (`T4_BOW`, mode `BEST_OF_ALL`, fixed prices):**
+
+| Step | Value |
+|---|---|
+| Materials | `T4_PLANK × 8` |
+| Buy price (`FortSterling`) | 720 |
+| Refining bonus (`FortSterling`, Holz) | 9.8 % |
+| Effective unit cost | 720 × (1 − 0.098) = 649.44 |
+| Material cost | 649.44 × 8 = 5 195.52 |
+| Crafting bonus (`Martlock`, Bögen, Stoff, Möbel) | 25 % |
+| `totalCost` | 5 195.52 × (1 − 0.25) = 3 896.64 |
+| Sell price (`Martlock`) | 18 450 |
+| `profit` | 18 450 − 3 896.64 = 14 553.36 |
+| `profitRatio` | 14 553.36 / 3 896.64 ≈ 3.7348 |
+
+> **Known simplification:** the refining bonus is currently applied at recipe
+> level (`recipe.refiningCategory()`) for every material. The real game carries
+> a refining category *per material*; the upgrade path is to thread the
+> category into `RecipeIngredient`.
 
 #### Phase 6 — Crafting plan
 - `service/CraftingPlanService` iterates the recipe tree and produces
