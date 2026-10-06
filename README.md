@@ -107,8 +107,9 @@ mvn test       # Unit tests only
 mvn verify     # Unit + Integration + Coverage report (target/site/jacoco/)
 ```
 
-> Current unit-test count: **65** across the domain, config, service and
-> dataprovider packages (no Spring context required).
+> Current unit-test count: **98** methods across **22** classes in the
+> domain, config, service, calculator and dataprovider packages
+> (no Spring context required).
 
 ### Test Strategy
 
@@ -148,16 +149,14 @@ trade-calc/
     ├── main/
     │   ├── java/de/am/albion/tradecalc/
     │   │   ├── TradeCalcApplication.java    # @SpringBootApplication
-    │   │   ├── config/                      # Properties classes
-    │   │   ├── api/                         # REST endpoints (Phase 3+)
-    │   │   ├── ui/                          # Web UI (Phase 8)
+    │   │   ├── config/                      # Properties classes (Phase 1)
+    │   │   ├── api/                         # REST endpoints (Phase 3)
     │   │   ├── dataprovider/                # API adapter (Phase 3)
     │   │   ├── repository/                  # In-memory indexes (Phase 2+)
-    │   │   ├── service/                     # Application logic (Phase 5+)
+    │   │   ├── service/                     # Application logic (Phase 5)
     │   │   │   ├── ProfitCalculationService.java    # Strategy dispatch (Phase 5)
     │   │   │   └── calculator/             # Profit strategies (Phase 5)
-    │   │   ├── domain/                      # Records / enums (Phase 2)
-    │   │   └── exception/                   # Error handling (Phase 7)
+    │   │   └── domain/                      # Records / enums (Phase 2)
     │   └── resources/
     │       ├── application.yml              # Main configuration
     │       ├── application-dev.yml          # Dev profile
@@ -176,9 +175,9 @@ trade-calc/
 | 1 | Foundation (config, properties, actuator, cache) | ✅ |
 | 2 | Static data (domain records, JSON recipes, CityBonusRepository) | ✅ |
 | 3 | External API (AlbionDataApiClient + MarketJsonMapper) | ✅ |
-| 4 | Refresh & Actuator stats | ✅ |
+| 4 | Actuator cache stats (no `/api/v1/refresh` yet — see Phase 7) | ✅ |
 | 5 | Core calculation (ProfitCalculationService — Strategy pattern) | ✅ |
-| 6 | Crafting plan (CraftingPlanService) | ⏳ |
+| 6 | Crafting plan (domain model only; service pending) | ⏳ |
 | 7 | REST-API for calculation | ⏳ |
 | 8 | Web UI (Thymeleaf + HTMX) | ⏳ |
 | 9 | Polish & Quality | ⏳ |
@@ -271,9 +270,9 @@ de.am.albion.tradecalc
 ├── api/                               # REST endpoints
 │   └── PriceController.java            # GET /api/v1/prices/{itemId}
 │
-├── ui/                                # Web UI (Thymeleaf) — Phase 8
-│   ├── controller/
-│   └── dto/
+├── ui/                                # Web UI (Thymeleaf) — Phase 8 (not yet)
+│   ├── controller/                     # planned
+│   └── dto/                            # planned
 │
 ├── dataprovider/                      # Adapter for external sources
 │   ├── albion/
@@ -349,8 +348,11 @@ before writing any code. *Verify:* `mvn -v` shows Java 21+ and Maven 3.9+.
 - `domain/model/*` records (`Item`, `City`, `CityBonus`, `Recipe`, `MarketPrice`,
   `ProfitResult`, `CraftingPlan`, `CraftingStep`, `RecipeIngredient`)
 - `resources/bonuses.json` (7 cities) and `resources/recipes/` (5–10 example recipes)
-- `dataprovider/recipe/RecipeLoader` (cached via `@Cacheable("recipes")`)
-- `repository/CityBonusRepository` (in-memory index)
+- `dataprovider/recipe/RecipeLoader` (loaded once into a `final` field;
+  per-item look-ups go through `service/RecipeService` which is
+  `@Cacheable("recipes")`)
+- `repository/CityBonusRepository` (loaded once from `bonuses.json`; per
+  look-up `@Cacheable("cityBonuses")`)
 
 *Verify:* unit test loads 3 recipes and asserts the indexes are consistent.
 
@@ -364,12 +366,16 @@ before writing any code. *Verify:* `mvn -v` shows Java 21+ and Maven 3.9+.
 *Verify:* live call against the real API (e.g. `T4_WOOD`) lands in the cache; a second
 call returns in single-digit ms.
 
-#### Phase 4 — Refresh & Actuator
-- `api/RefreshController` (`POST /api/v1/refresh` clears the `marketPrices` cache and
-  calls `PriceService.warmUp()`)
-- `config/CacheConfig` with `CaffeineCacheManager` bean
+#### Phase 4 — Actuator cache stats
+- Caches declared in `application.yml` (`marketPrices`, `recipes`, `cityBonuses`)
+  with Caffeine `maximumSize` and `expireAfterWrite` derived from
+  `cache.market.*` via Spring property interpolation
+- `/actuator/caches/{name}` exposes size, hit rate and eviction counts
+- **Not yet wired:** `POST /api/v1/refresh` (planned for Phase 7 together with
+  the calculation endpoint so the UI can force a refresh in one round-trip)
 
-*Verify:* `/actuator/caches/marketPrices` shows size and hit rate.
+*Verify:* `/actuator/caches/marketPrices` shows size and hit rate after a
+`GET /api/v1/prices/T4_BOW`.
 
 #### Phase 5 — Core calculation ✅
 - `service/ProfitCalculationService` dispatches per `CalculationMode` via an
@@ -397,24 +403,26 @@ strategy fails fast at service construction.
 | Refining bonus (`FortSterling`, Holz) | 9.8 % |
 | Effective unit cost | 720 × (1 − 0.098) = 649.44 |
 | Material cost | 649.44 × 8 = 5 195.52 |
-| Crafting bonus (`Martlock`, Bögen, Stoff, Möbel) | 25 % |
-| `totalCost` | 5 195.52 × (1 − 0.25) = 3 896.64 |
-| Sell price (`Martlock`) | 18 450 |
-| `profit` | 18 450 − 3 896.64 = 14 553.36 |
-| `profitRatio` | 14 553.36 / 3 896.64 ≈ 3.7348 |
+| Crafting bonus (`Lymhurst`, Bögen, Stoff, Möbel) | 18.3 % |
+| `totalCost` | 5 195.52 × (1 − 0.183) = 4 244.74 |
+| Sell price (`Lymhurst`) | 18 450 |
+| `profit` | 18 450 − 4 244.74 = 14 205.26 |
+| `profitRatio` | 14 205.26 / 4 244.74 ≈ 3.3465 |
 
 > **Known simplification:** the refining bonus is currently applied at recipe
 > level (`recipe.refiningCategory()`) for every material. The real game carries
 > a refining category *per material*; the upgrade path is to thread the
 > category into `RecipeIngredient`.
 
-#### Phase 6 — Crafting plan
-- `service/CraftingPlanService` iterates the recipe tree and produces
-  `BuyStep` / `RefineStep` / `CraftStep` / `SellStep`
+#### Phase 6 — Crafting plan (domain model in place, service pending)
+- `domain/model/CraftingPlan` and `domain/model/CraftingStep` records are
+  already in place.
+- **Pending:** `service/CraftingPlanService` iterates the recipe tree and
+  produces `BuyStep` / `RefineStep` / `CraftStep` / `SellStep`
 - Tests with mock `MarketPrice`, asserting order and cities
 
-*Verify:* for `T4_BOW` (c) the plan returns "wood in Lymhurst → planks in Fort Sterling →
-sell bow in Lymhurst".
+*Verify (planned):* for `T4_BOW` (c) the plan returns "wood in Lymhurst →
+planks in Fort Sterling → sell bow in Lymhurst".
 
 #### Phase 7 — REST API for calculation
 - `api/ProfitController` (`POST /api/v1/profit/calculate`, body: `CalculationRequestDto`)
@@ -432,7 +440,9 @@ sell bow in Lymhurst".
 *Verify:* browser flow — pick city → pick mode → calculate → click row → see plan.
 
 #### Phase 9 — Polish & quality
-- WireMock for API in tests, Spring Boot Test for end-to-end
+- Spring Boot Test for end-to-end (integration tests are already wired and use
+  `@ActiveProfiles("dev")`); HTTP upstream stays stubbed via
+  `MockClientHttpRequest` / `MockClientHttpResponse` (no WireMock yet)
 - Optional Resilience4j retry / circuit-breaker for API outages
 - Bulk warm-up on start (scheduler) for only the items that appear in recipes
 - Structured logs with MDC for request IDs
@@ -469,4 +479,5 @@ sell bow in Lymhurst".
 
 - [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) — License terms
 - [Albion Online Data API](https://www.albion-online-data.com/api/) — Market data source
-- [Spring Boot Docs](https://docs.spring.io/spring-boot/docs/3.3.x/reference/) — Framework reference
+- [Spring Boot Docs](https://docs.spring.io/spring-boot/) — Framework reference
+  (3.3.x is now served from the canonical `/spring-boot/` URL)
