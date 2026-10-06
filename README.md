@@ -107,8 +107,8 @@ mvn test       # Unit tests only
 mvn verify     # Unit + Integration + Coverage report (target/site/jacoco/)
 ```
 
-> Current unit-test count: **94** unit tests across **20** `*Test` classes,
-> plus **8** `*IT` integration tests across **3** `*IT` classes, in the
+> Current unit-test count: **97** unit tests across **21** `*Test` classes,
+> plus **12** `*IT` integration tests across **4** `*IT` classes, in the
 > `domain`, `config`, `service`, `calculator` and `dataprovider` packages
 > (no Spring context for unit tests).
 
@@ -180,7 +180,7 @@ trade-calc/
 | 1 | Foundation (config, properties, actuator, cache) | ✅ |
 | 2 | Static data (domain records, JSON recipes, CityBonusRepository) | ✅ |
 | 3 | External API (AlbionDataApiClient + MarketJsonMapper) | ✅ |
-| 4 | Actuator cache stats (no `/api/v1/refresh` yet — see Phase 7) | ✅ |
+| 4 | REST API for calculation (`POST /api/v1/profit/calculate`) | ✅ |
 | 5 | Core calculation (ProfitCalculationService — Strategy pattern) | ✅ |
 | 6 | Crafting plan (`CraftingPlanService` + 4 step kinds) | ✅ |
 | 7 | REST-API for calculation | ⏳ |
@@ -303,6 +303,7 @@ de.am.albion.tradecalc
 │   ├── PriceServiceAdapter.java        # PriceLookup adapter for calculator
 │   ├── RecipeService.java              # Recipe lookup
 │   ├── ProfitCalculationService.java   # Strategy dispatch (Phase 5)
+│   ├── ProfitQueryService.java         # Ranked top-N query (Phase 7)
 │   ├── CraftingPlanService.java        # Step-by-step plan (Phase 6)
 │   └── calculator/                     # Profit strategies (Phase 5)
 │       ├── ProfitStrategy.java         # Interface — one impl per CalculationMode
@@ -440,7 +441,7 @@ planks in Fort Sterling → sell bow in Lymhurst".
 > step; the monetary total lives on `CraftingPlan.profitSummary`. The upgrade
 > path is to thread per-action fees into the strategy and back onto the step.
 
-#### Phase 7 — REST API for calculation
+#### Phase 7 — REST API for calculation ✅
 - `api/ProfitController` (`POST /api/v1/profit/calculate`, body: `CalculationRequestDto`)
 - Request / response DTOs with `jakarta.validation`
 - `GlobalExceptionHandler` for error responses
