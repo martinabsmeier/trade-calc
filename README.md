@@ -107,8 +107,8 @@ mvn test       # Unit tests only
 mvn verify     # Unit + Integration + Coverage report (target/site/jacoco/)
 ```
 
-> Current unit-test count: **97** unit tests across **21** `*Test` classes,
-> plus **17** `*IT` integration tests across **5** `*IT` classes, in the
+> Current unit-test count: **102** unit tests across **24** `*Test` classes,
+> plus **19** `*IT` integration tests across **6** `*IT` classes, in the
 > `domain`, `config`, `service`, `calculator` and `dataprovider` packages
 > (no Spring context for unit tests).
 
@@ -303,6 +303,11 @@ de.am.albion.tradecalc
 │   ├── CityBonusRepository.java        # Loaded once from bonuses.json
 │   └── CityBonusRepositoryAdapter.java # CityBonusProvider for calculator package
 │
+├── observability/                     # Cross-cutting concerns (Phase 9)
+│   ├── MdcKeys.java                   # requestId key
+│   ├── RequestIdFilter.java             # OncePerRequestFilter — X-Request-Id + MDC
+│   └── MarketPriceWarmupService.java  # @EventListener(ApplicationReadyEvent)
+│
 ├── service/                           # Application logic
 │   ├── PriceService.java               # Market data
 │   ├── PriceServiceAdapter.java        # PriceLookup adapter for calculator
@@ -461,16 +466,19 @@ planks in Fort Sterling → sell bow in Lymhurst".
 
 *Verify:* browser flow — pick city → pick mode → calculate → click row → see plan.
 
-#### Phase 9 — Polish & quality
-- Spring Boot Test for end-to-end (integration tests are already wired and use
-  `@ActiveProfiles("dev")`); HTTP upstream stays stubbed via
-  `MockClientHttpRequest` / `MockClientHttpResponse` (no WireMock yet)
-- Optional Resilience4j retry / circuit-breaker for API outages
-- Bulk warm-up on start (scheduler) for only the items that appear in recipes
-- Structured logs with MDC for request IDs
-- This README with run instructions
-
-*Verify:* app runs for 1 hour without memory leak; all tests green.
+#### Phase 9 — Polish & quality ✅
+- Hand-rolled retry in `AlbionDataApiClient` — exponential backoff on
+  `ResourceAccessException`, 3 attempts, no new dependency. Catches only
+  transport-level failures; HTTP 4xx/5xx still bubble up.
+- `RequestIdFilter` (`OncePerRequestFilter`, `HIGHEST_PRECEDENCE`) reads an
+  incoming `X-Request-Id` header or mints a UUID, puts it into the MDC and
+  echoes it on the response. Logback picks it up via `%X{requestId}`.
+- `MarketPriceWarmupService` — `@EventListener(ApplicationReadyEvent)` walks
+  the recipe tree once on startup and pre-loads `priceService.getPrices(...)`
+  for every distinct item. Per-item failures are logged and swallowed so one
+  missing market entry doesn't block the rest.
+- New `observability/` package (`MdcKeys`, `RequestIdFilter`,
+  `MarketPriceWarmupService`). No resilience4j / spring-retry on the classpath.
 
 ### Roadmap Ordering
 

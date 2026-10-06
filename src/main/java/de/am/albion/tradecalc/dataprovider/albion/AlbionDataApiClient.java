@@ -51,6 +51,15 @@ public class AlbionDataApiClient {
     private final AlbionApiProperties properties;
 
     /**
+     * Total attempts on transient failures: one initial call plus two retries.
+     * ponytail: a hand-rolled retry keeps the dependency surface clean. Upgrade
+     * path is Resilience4j once we need circuit breaking or rate limiting.
+     */
+    static final int MAX_ATTEMPTS = 3;
+    /** Initial backoff in milliseconds; doubled after every retry attempt. */
+    static final long RETRY_BACKOFF_MS = 200L;
+
+    /**
      * Creates a client configured against {@link AlbionApiProperties#getBaseUrl()}.
      *
      * @param properties bound API configuration (base URL, locations, qualities, server)
@@ -73,7 +82,10 @@ public class AlbionDataApiClient {
     }
 
     /**
-     * Fetches the price matrix for the given item identifiers.
+     * Fetches the price matrix for the given item identifiers. Retries on
+     * transient {@link org.springframework.web.client.ResourceAccessException}
+     * (connection refused, read timeout, …) up to {@link #MAX_ATTEMPTS} times
+     * with exponential backoff; non-transient failures bubble up immediately.
      *
      * @param itemIds one or more Albion item identifiers (e.g. {@code "T4_BOW"});
      *                must not be empty
@@ -84,8 +96,26 @@ public class AlbionDataApiClient {
         if (itemIds == null || itemIds.length == 0) {
             throw new IllegalArgumentException("At least one item id is required");
         }
-        String items = String.join(",", itemIds);
+        long backoff = RETRY_BACKOFF_MS;
+        org.springframework.web.client.ResourceAccessException lastFailure = null;
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                return doFetch(itemsParam(itemIds));
+            } catch (org.springframework.web.client.ResourceAccessException ex) {
+                lastFailure = ex;
+                if (attempt == MAX_ATTEMPTS) {
+                    break;
+                }
+                log.warn("Albion API call failed (attempt {}/{}): {} — retrying in {} ms",
+                        attempt, MAX_ATTEMPTS, ex.getMessage(), backoff);
+                sleep(backoff);
+                backoff *= 2;
+            }
+        }
+        throw lastFailure;
+    }
 
+    private List<MarketJson> doFetch(String items) {
         MarketJson[] response = restClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/api/v2/stats/prices/{items}")
@@ -99,7 +129,20 @@ public class AlbionDataApiClient {
                 .body(MarketJson[].class);
 
         List<MarketJson> body = response == null ? List.of() : Arrays.asList(response);
-        log.debug("Fetched {} price records for {} item(s)", body.size(), itemIds.length);
+        log.debug("Fetched {} price records for {} item(s)", body.size(), items);
         return body;
+    }
+
+    private static String itemsParam(String[] itemIds) {
+        return String.join(",", itemIds);
+    }
+
+    private static void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted during retry backoff", e);
+        }
     }
 }
