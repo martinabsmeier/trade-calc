@@ -151,4 +151,38 @@ class PriceServiceTest {
         verify(client, times(1)).fetchPrices(captor.capture());
         assertThat(captor.getAllValues()).containsExactly("T4_BOW");
     }
+
+    /**
+     * Upstream rows with a {@code null} {@code itemId} field are silently
+     * dropped — defends against records where the JSON parser kept a missing
+     * field as {@code null} rather than failing the whole payload.
+     */
+    @Test
+    void getPrices_dropsRowsWithNullItemId() {
+        MarketJson nullItem = new MarketJson(null, "Lymhurst", 1,
+                BigDecimal.valueOf(100), null, Instant.now(), null);
+        MarketJson valid = new MarketJson("T4_WOOD", "Lymhurst", 1,
+                BigDecimal.valueOf(100), null, Instant.now(), null);
+        when(client.fetchPrices("T4_WOOD")).thenReturn(List.of(nullItem, valid));
+
+        Map<String, MarketPrice> prices = service.getPrices("T4_WOOD");
+
+        assertThat(prices).containsOnlyKeys("Lymhurst");
+        assertThat(prices.get("Lymhurst").sellPriceMin()).isEqualByComparingTo("100");
+    }
+
+    /**
+     * Upstream rows with a {@code null} {@code city} field are silently
+     * dropped — they cannot be indexed in the per-city map.
+     */
+    @Test
+    void getPrices_dropsRowsWithNullCity() {
+        MarketJson nullCity = new MarketJson("T4_WOOD", null, 1,
+                BigDecimal.valueOf(100), null, Instant.now(), null);
+        when(client.fetchPrices("T4_WOOD")).thenReturn(List.of(nullCity));
+
+        Map<String, MarketPrice> prices = service.getPrices("T4_WOOD");
+
+        assertThat(prices).isEmpty();
+    }
 }
