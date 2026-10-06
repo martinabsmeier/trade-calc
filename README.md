@@ -107,9 +107,10 @@ mvn test       # Unit tests only
 mvn verify     # Unit + Integration + Coverage report (target/site/jacoco/)
 ```
 
-> Current unit-test count: **94** unit tests across **22** `*Test` classes,
-> plus **8** `*IT` integration tests, in the `domain`, `config`, `service`,
-> `calculator` and `dataprovider` packages (no Spring context for unit tests).
+> Current unit-test count: **94** unit tests across **20** `*Test` classes,
+> plus **8** `*IT` integration tests across **3** `*IT` classes, in the
+> `domain`, `config`, `service`, `calculator` and `dataprovider` packages
+> (no Spring context for unit tests).
 
 ### Test Strategy
 
@@ -153,8 +154,12 @@ trade-calc/
     │   │   ├── api/                         # REST endpoints (Phase 3)
     │   │   ├── dataprovider/                # API adapter (Phase 3)
     │   │   ├── repository/                  # In-memory indexes (Phase 2+)
-    │   │   ├── service/                     # Application logic (Phase 5)
+    │   │   ├── service/                     # Application logic (Phase 5+)
+    │   │   │   ├── PriceService.java                # Market data (Phase 3)
+    │   │   │   ├── RecipeService.java               # Recipe lookup (Phase 5)
     │   │   │   ├── ProfitCalculationService.java    # Strategy dispatch (Phase 5)
+    │   │   │   ├── CraftingPlanService.java         # Step-by-step plan (Phase 6)
+    │   │   │   ├── PriceServiceAdapter.java         # PriceLookup adapter
     │   │   │   └── calculator/             # Profit strategies (Phase 5)
     │   │   └── domain/                      # Records / enums (Phase 2)
     │   └── resources/
@@ -236,12 +241,17 @@ Given `selectedCity`, `mode`, `recipe`, `marketPrices[]`:
 4. **Sell price:** `sellPriceMin(result, craftCity)`
 5. **Profit:**
    ```
-   materialCostEffective = materialCost × (1 − refiningBonus)
-   craftCostEffective    = (sum(materialCostEffective) + craftingFee) × (1 − craftingBonus)
-   totalCost             = craftCostEffective
-   profit                = sellPrice − totalCost
-   roi                   = profit / totalCost × 100
+   effectiveUnitCost(material) = buyPriceMax(material, buyCity) × (1 − refiningBonus(buyCity, recipe.refiningCategory))
+   materialCost                = Σ effectiveUnitCost(material) × quantity
+   totalCost                   = materialCost × (1 − craftingBonus(craftCity, recipe.craftingCategory))
+   profit                      = sellPrice − totalCost
+   roi                         = profit / totalCost × 100
    ```
+
+   > **Known simplification:** the refining bonus is currently read from
+> `recipe.refiningCategory()` for every material (the recipe-level category).
+> The real game carries a refining category *per material*; the upgrade path
+> is to thread the category into `RecipeIngredient` and use it instead.
 6. **Sort:** all items descending by `ROI`.
 7. **CraftingPlan:** generate a step-by-step instruction for the UI.
 
@@ -285,12 +295,15 @@ de.am.albion.tradecalc
 │       └── RecipeLoadException.java
 │
 ├── repository/                        # In-memory indexes + cache wrappers
-│   └── CityBonusRepository.java        # Loaded once from bonuses.json
+│   ├── CityBonusRepository.java        # Loaded once from bonuses.json
+│   └── CityBonusRepositoryAdapter.java # CityBonusProvider for calculator package
 │
 ├── service/                           # Application logic
 │   ├── PriceService.java               # Market data
+│   ├── PriceServiceAdapter.java        # PriceLookup adapter for calculator
 │   ├── RecipeService.java              # Recipe lookup
 │   ├── ProfitCalculationService.java   # Strategy dispatch (Phase 5)
+│   ├── CraftingPlanService.java        # Step-by-step plan (Phase 6)
 │   └── calculator/                     # Profit strategies (Phase 5)
 │       ├── ProfitStrategy.java         # Interface — one impl per CalculationMode
 │       ├── PriceLookup.java            # Read-only view on PriceService
@@ -407,12 +420,7 @@ strategy fails fast at service construction.
 | `totalCost` | 5 195.52 × (1 − 0.183) = 4 244.74 |
 | Sell price (`Lymhurst`) | 18 450 |
 | `profit` | 18 450 − 4 244.74 = 14 205.26 |
-| `profitRatio` | 14 205.26 / 4 244.74 ≈ 3.3465 |
-
-> **Known simplification:** the refining bonus is currently applied at recipe
-> level (`recipe.refiningCategory()`) for every material. The real game carries
-> a refining category *per material*; the upgrade path is to thread the
-> category into `RecipeIngredient`.
+| `profitRatio` | 14 205.26 / 4 244.74 ≈ 3.3466 |
 
 #### Phase 6 — Crafting plan ✅
 - `domain/model/CraftingPlan` and `domain/model/CraftingStep` records are in place.

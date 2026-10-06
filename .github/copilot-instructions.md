@@ -80,8 +80,8 @@ agree on cities.
 - `*IT.java` → integration test, picked up by `maven-failsafe-plugin` (~5 s,
   `@SpringBootTest`, real HTTP via random port, `@ActiveProfiles("dev")`).
 - Mixing them is a build error: do not name an integration test `FooTest`.
-- Current count: **94** unit tests + **8** integration tests
-  (`*Test` / `*IT` files respectively) — update the README's quoted count
+- Current count: **94** unit tests in **20** `*Test` classes + **8**
+  integration tests in **3** `*IT` classes — update the README's quoted count
   whenever you add or remove tests.
 
 ### `RecipeLoader` ≠ `@Cacheable("recipes")`
