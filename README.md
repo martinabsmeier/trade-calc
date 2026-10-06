@@ -111,7 +111,7 @@ mvn verify     # Unit + Integration + Coverage report (target/site/jacoco/)
 ```
 
 > Current unit-test count: **102** unit tests across **24** `*Test` classes,
-> plus **19** `*IT` integration tests across **6** `*IT` classes. JaCoCo
+> plus **20** `*IT` integration tests across **7** `*IT` classes. JaCoCo
 > enforces ≥ 80 % branch and ≥ 70 % line coverage on the `BUNDLE`.
 
 ### Test Strategy
@@ -354,7 +354,7 @@ de.am.albion.tradecalc
 ### Test Counters
 
 The project ships with **102** unit tests across **24** `*Test` classes, plus
-**19** `*IT` integration tests across **6** `*IT` classes. JaCoCo gates enforce
+**20** `*IT` integration tests across **7** `*IT` classes. JaCoCo gates enforce
 ≥ 80 % branch and ≥ 70 % line coverage on the `BUNDLE`.
 
 ## Contributing

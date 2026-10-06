@@ -22,6 +22,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -59,6 +60,18 @@ public class GlobalExceptionHandler {
                 "type_mismatch",
                 "Parameter '" + ex.getName() + "' has wrong type",
                 Map.of("parameter", ex.getName())));
+    }
+
+    // Browsers probe /favicon.ico unconditionally; Spring 6 raises this for
+    // every unknown static resource. It is a 404, not a server error — let
+    // the default handling run by mapping it to NOT_FOUND instead of letting
+    // the catch-all log it as ERROR.
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResource(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error(
+                "not_found",
+                "No resource at " + ex.getResourcePath(),
+                Map.of("path", ex.getResourcePath())));
     }
 
     @ExceptionHandler(Exception.class)
