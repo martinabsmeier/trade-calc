@@ -15,8 +15,6 @@
  */
 package de.am.albion.tradecalc.domain.model;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
 import java.math.BigDecimal;
@@ -45,20 +43,4 @@ public record MarketPrice(
         BigDecimal buyPriceMax,
         BigDecimal sellPriceMin,
         Instant observedAt) {
-
-    @JsonCreator
-    public MarketPrice(
-            @JsonProperty("itemId") String itemId,
-            @JsonProperty("city") String city,
-            @JsonProperty("quality") int quality,
-            @JsonProperty("buyPriceMax") BigDecimal buyPriceMax,
-            @JsonProperty("sellPriceMin") BigDecimal sellPriceMin,
-            @JsonProperty("observedAt") Instant observedAt) {
-        this.itemId = itemId;
-        this.city = city;
-        this.quality = quality;
-        this.buyPriceMax = buyPriceMax;
-        this.sellPriceMin = sellPriceMin;
-        this.observedAt = observedAt;
-    }
 }

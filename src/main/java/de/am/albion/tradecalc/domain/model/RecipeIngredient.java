@@ -15,8 +15,6 @@
  */
 package de.am.albion.tradecalc.domain.model;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
 import java.math.BigDecimal;
@@ -37,14 +35,4 @@ public record RecipeIngredient(
         String itemId,
         int quantity,
         BigDecimal buyPriceMax) {
-
-    @JsonCreator
-    public RecipeIngredient(
-            @JsonProperty("itemId") String itemId,
-            @JsonProperty("quantity") int quantity,
-            @JsonProperty("buyPriceMax") BigDecimal buyPriceMax) {
-        this.itemId = itemId;
-        this.quantity = quantity;
-        this.buyPriceMax = buyPriceMax;
-    }
 }

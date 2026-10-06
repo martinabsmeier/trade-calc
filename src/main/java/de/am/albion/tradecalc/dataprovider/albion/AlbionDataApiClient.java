@@ -20,12 +20,12 @@ import de.am.albion.tradecalc.dataprovider.albion.dto.MarketJson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Thin HTTP client for the <strong>Albion Online Data API</strong>
@@ -57,7 +57,7 @@ public class AlbionDataApiClient {
      */
     @Autowired
     public AlbionDataApiClient(AlbionApiProperties properties) {
-        this(properties, defaultRestClientBuilder());
+        this(properties, RestClient.builder());
     }
 
     /**
@@ -70,14 +70,6 @@ public class AlbionDataApiClient {
     AlbionDataApiClient(AlbionApiProperties properties, RestClient.Builder builder) {
         this.properties = properties;
         this.restClient = builder.baseUrl(properties.getBaseUrl()).build();
-    }
-
-    private static RestClient.Builder defaultRestClientBuilder() {
-        return RestClient.builder()
-                .messageConverters(c -> {
-                    c.clear();
-                    c.add(new MappingJackson2HttpMessageConverter());
-                });
     }
 
     /**
@@ -93,17 +85,13 @@ public class AlbionDataApiClient {
             throw new IllegalArgumentException("At least one item id is required");
         }
         String items = String.join(",", itemIds);
-        String locations = String.join(",", properties.getLocations());
-        String qualities = properties.getQualities().stream()
-                .map(String::valueOf)
-                .reduce((a, b) -> a + "," + b)
-                .orElse("1");
 
         MarketJson[] response = restClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/api/v2/stats/prices/{items}")
-                        .queryParam("locations", locations)
-                        .queryParam("qualities", qualities)
+                        .queryParam("locations", String.join(",", properties.getLocations()))
+                        .queryParam("qualities", properties.getQualities().stream()
+                                .map(String::valueOf).collect(Collectors.joining(",")))
                         .queryParam("server", properties.getServer())
                         .build(items))
                 .accept(MediaType.APPLICATION_JSON)

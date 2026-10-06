@@ -15,8 +15,6 @@
  */
 package de.am.albion.tradecalc.domain.model;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
 /**
@@ -39,14 +37,4 @@ public record Item(
         String id,
         int tier,
         String category) {
-
-    @JsonCreator
-    public Item(
-            @JsonProperty("id") String id,
-            @JsonProperty("tier") int tier,
-            @JsonProperty("category") String category) {
-        this.id = id;
-        this.tier = tier;
-        this.category = category;
-    }
 }

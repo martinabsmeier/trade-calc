@@ -15,8 +15,6 @@
  */
 package de.am.albion.tradecalc.domain.model;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
 import java.math.BigDecimal;
@@ -42,14 +40,4 @@ public record CityBonus(
         String cityName,
         String category,
         BigDecimal bonus) {
-
-    @JsonCreator
-    public CityBonus(
-            @JsonProperty("cityName") String cityName,
-            @JsonProperty("category") String category,
-            @JsonProperty("bonus") BigDecimal bonus) {
-        this.cityName = cityName;
-        this.category = category;
-        this.bonus = bonus;
-    }
 }
