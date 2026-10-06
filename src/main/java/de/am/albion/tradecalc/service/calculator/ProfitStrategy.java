@@ -18,6 +18,7 @@ package de.am.albion.tradecalc.service.calculator;
 import de.am.albion.tradecalc.domain.CalculationMode;
 import de.am.albion.tradecalc.domain.model.ProfitResult;
 import de.am.albion.tradecalc.domain.model.Recipe;
+import de.am.albion.tradecalc.domain.model.RecipeIngredient;
 
 import java.util.Optional;
 
@@ -53,4 +54,39 @@ public interface ProfitStrategy {
      * @return the calculated profit, or empty if no feasible result exists
      */
     Optional<ProfitResult> calculate(Recipe recipe, String homeCity, PriceLookup prices);
+
+    /**
+     * Resolves the city in which a material should be bought under this
+     * strategy. Exposed for reuse by {@code CraftingPlanService} so the plan
+     * and the calculation pick the same place to buy.
+     *
+     * <p>Default implementation returns {@code homeCity}; concrete strategies
+     * override based on their mode.</p>
+     *
+     * @param material the recipe ingredient to purchase
+     * @param homeCity the user-selected home city
+     * @param prices the price source for the material
+     * @return the city to buy in; never {@code null}
+     */
+    default String buyCityFor(RecipeIngredient material, String homeCity, PriceLookup prices) {
+        return homeCity;
+    }
+
+    /**
+     * Resolves the city in which the recipe's result item should be crafted
+     * and sold under this strategy. Exposed for reuse by
+     * {@code CraftingPlanService} so the plan's {@code CRAFT} and
+     * {@code SELL} steps land in the same city the calculation used.
+     *
+     * <p>Default implementation returns {@code homeCity}; concrete strategies
+     * override based on their mode.</p>
+     *
+     * @param recipe the recipe being crafted
+     * @param homeCity the user-selected home city
+     * @param prices the price source for the result item
+     * @return the city to craft and sell in; never {@code null}
+     */
+    default String craftCityFor(Recipe recipe, String homeCity, PriceLookup prices) {
+        return homeCity;
+    }
 }

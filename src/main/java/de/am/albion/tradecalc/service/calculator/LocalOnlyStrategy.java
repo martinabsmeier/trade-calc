@@ -33,12 +33,12 @@ final class LocalOnlyStrategy extends AbstractProfitStrategy {
     }
 
     @Override
-    protected String buyCityFor(RecipeIngredient material, String homeCity, PriceLookup prices) {
+    public String buyCityFor(RecipeIngredient material, String homeCity, PriceLookup prices) {
         return homeCity;
     }
 
     @Override
-    protected String craftCityFor(Recipe recipe, String homeCity, PriceLookup prices) {
+    public String craftCityFor(Recipe recipe, String homeCity, PriceLookup prices) {
         return homeCity;
     }
 

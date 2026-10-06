@@ -76,4 +76,16 @@ public class ProfitCalculationService {
     public Optional<ProfitResult> calculate(CalculationMode mode, Recipe recipe, String homeCity, PriceLookup prices) {
         return strategies.get(mode).calculate(recipe, homeCity, prices);
     }
+
+    /**
+     * Returns the {@link ProfitStrategy} registered for {@code mode}. Used by
+     * {@link CraftingPlanService} to share the strategy's buy- and craft-city
+     * decisions so the plan and the {@link ProfitResult} agree.
+     *
+     * @param mode the calculation mode
+     * @return the strategy; never {@code null} (the constructor enforces full coverage)
+     */
+    public ProfitStrategy strategyFor(CalculationMode mode) {
+        return strategies.get(mode);
+    }
 }

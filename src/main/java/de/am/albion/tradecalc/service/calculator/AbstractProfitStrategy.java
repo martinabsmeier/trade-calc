@@ -46,16 +46,17 @@ abstract class AbstractProfitStrategy implements ProfitStrategy {
 
     /**
      * Resolves the city in which the material should be bought under this
-     * strategy. May be {@code null} if the strategy could not pick one (e.g.
-     * no price is available for any city).
+     * strategy. Returns {@code homeCity} as a safe fallback when no price
+     * is available for any city.
      */
-    protected abstract String buyCityFor(RecipeIngredient material, String homeCity, PriceLookup prices);
+    public abstract String buyCityFor(RecipeIngredient material, String homeCity, PriceLookup prices);
 
     /**
      * Resolves the city in which the recipe's result item should be crafted
-     * and sold.
+     * and sold. Returns {@code homeCity} as a safe fallback when no price
+     * is available for any city.
      */
-    protected abstract String craftCityFor(Recipe recipe, String homeCity, PriceLookup prices);
+    public abstract String craftCityFor(Recipe recipe, String homeCity, PriceLookup prices);
 
     /**
      * {@inheritDoc}

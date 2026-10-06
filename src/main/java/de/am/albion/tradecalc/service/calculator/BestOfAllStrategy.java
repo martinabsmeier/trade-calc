@@ -41,24 +41,24 @@ final class BestOfAllStrategy extends AbstractProfitStrategy {
     }
 
     @Override
-    protected String buyCityFor(RecipeIngredient material, String homeCity, PriceLookup prices) {
+    public String buyCityFor(RecipeIngredient material, String homeCity, PriceLookup prices) {
         Map<String, MarketPrice> cityPrices = prices.pricesFor(material.itemId());
         return cityPrices.entrySet().stream()
                 .filter(e -> e.getValue().buyPriceMax() != null)
                 .min((a, b) -> a.getValue().buyPriceMax().compareTo(b.getValue().buyPriceMax()))
                 .map(Map.Entry::getKey)
-                .orElse(null);
+                .orElse(homeCity);
     }
 
     @Override
-    protected String craftCityFor(Recipe recipe, String homeCity, PriceLookup prices) {
+    public String craftCityFor(Recipe recipe, String homeCity, PriceLookup prices) {
         Map<String, MarketPrice> cityPrices = prices.pricesFor(recipe.itemId());
         return cityPrices.entrySet().stream()
                 .filter(e -> e.getValue().sellPriceMin() != null)
                 .max((a, b) -> bonuses.bonusFor(a.getKey(), recipe.craftingCategory())
                         .compareTo(bonuses.bonusFor(b.getKey(), recipe.craftingCategory())))
                 .map(Map.Entry::getKey)
-                .orElse(null);
+                .orElse(homeCity);
     }
 
     @Override

@@ -67,8 +67,10 @@ The data flow for one calculation: `PriceController` → `PriceService` →
 `EnumMap<CalculationMode, ProfitStrategy>` populated at construction.
 **Adding a new `CalculationMode` requires only adding the enum constant and a
 new `ProfitStrategy` `@Component`** — the service throws at construction if the
-two get out of sync. The `CraftingPlan` / `CraftingStep` domain records exist
-already; the `CraftingPlanService` that consumes them is pending (Phase 7).
+two get out of sync. `CraftingPlanService` walks the recipe tree bottom-up and
+emits four step kinds (`BUY` / `REFINE` / `CRAFT` / `SELL`) by reusing the
+strategy's `buyCityFor` / `craftCityFor` so the plan and the `ProfitResult`
+agree on cities.
 
 ## Codebase-Specific Conventions
 
@@ -78,8 +80,9 @@ already; the `CraftingPlanService` that consumes them is pending (Phase 7).
 - `*IT.java` → integration test, picked up by `maven-failsafe-plugin` (~5 s,
   `@SpringBootTest`, real HTTP via random port, `@ActiveProfiles("dev")`).
 - Mixing them is a build error: do not name an integration test `FooTest`.
-- Current count: **98** `@Test` / `@ParameterizedTest` methods across **22**
-  classes — update the README's quoted count whenever you add or remove tests.
+- Current count: **94** unit tests + **8** integration tests
+  (`*Test` / `*IT` files respectively) — update the README's quoted count
+  whenever you add or remove tests.
 
 ### `RecipeLoader` ≠ `@Cacheable("recipes")`
 

@@ -107,9 +107,9 @@ mvn test       # Unit tests only
 mvn verify     # Unit + Integration + Coverage report (target/site/jacoco/)
 ```
 
-> Current unit-test count: **98** methods across **22** classes in the
-> domain, config, service, calculator and dataprovider packages
-> (no Spring context required).
+> Current unit-test count: **94** unit tests across **22** `*Test` classes,
+> plus **8** `*IT` integration tests, in the `domain`, `config`, `service`,
+> `calculator` and `dataprovider` packages (no Spring context for unit tests).
 
 ### Test Strategy
 
@@ -177,7 +177,7 @@ trade-calc/
 | 3 | External API (AlbionDataApiClient + MarketJsonMapper) | ✅ |
 | 4 | Actuator cache stats (no `/api/v1/refresh` yet — see Phase 7) | ✅ |
 | 5 | Core calculation (ProfitCalculationService — Strategy pattern) | ✅ |
-| 6 | Crafting plan (domain model only; service pending) | ⏳ |
+| 6 | Crafting plan (`CraftingPlanService` + 4 step kinds) | ✅ |
 | 7 | REST-API for calculation | ⏳ |
 | 8 | Web UI (Thymeleaf + HTMX) | ⏳ |
 | 9 | Polish & Quality | ⏳ |
@@ -414,15 +414,23 @@ strategy fails fast at service construction.
 > a refining category *per material*; the upgrade path is to thread the
 > category into `RecipeIngredient`.
 
-#### Phase 6 — Crafting plan (domain model in place, service pending)
-- `domain/model/CraftingPlan` and `domain/model/CraftingStep` records are
-  already in place.
-- **Pending:** `service/CraftingPlanService` iterates the recipe tree and
-  produces `BuyStep` / `RefineStep` / `CraftStep` / `SellStep`
-- Tests with mock `MarketPrice`, asserting order and cities
+#### Phase 6 — Crafting plan ✅
+- `domain/model/CraftingPlan` and `domain/model/CraftingStep` records are in place.
+- `service/CraftingPlanService` walks the recipe tree bottom-up and emits four
+  step kinds: `BUY` (raw material, no recipe), `REFINE` (intermediate whose own
+  recipe is walked first), `CRAFT` (root recipe output) and `SELL` (root output
+  in the craft city). Cities are taken from the `ProfitStrategy` registered for
+  the chosen `CalculationMode`, so the plan and the `ProfitResult` agree.
+- A `Deque`-driven visited stack guards against recipe cycles.
+- 4 unit tests cover: full T4_BOW tree in topological order, unknown item,
+  missing profit, and craft/sell city selection.
 
 *Verify (planned):* for `T4_BOW` (c) the plan returns "wood in Lymhurst →
 planks in Fort Sterling → sell bow in Lymhurst".
+
+> **Known simplification:** `CraftingStep.cost` is `BigDecimal.ZERO` on every
+> step; the monetary total lives on `CraftingPlan.profitSummary`. The upgrade
+> path is to thread per-action fees into the strategy and back onto the step.
 
 #### Phase 7 — REST API for calculation
 - `api/ProfitController` (`POST /api/v1/profit/calculate`, body: `CalculationRequestDto`)
