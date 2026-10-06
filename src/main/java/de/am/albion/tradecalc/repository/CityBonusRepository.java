@@ -121,4 +121,36 @@ public class CityBonusRepository {
         }
         return categoryMatch != null ? categoryMatch : genericMatch;
     }
+
+    /**
+     * Returns the city offering the highest bonus for the given category.
+     * Falls back to the city with the highest generic bonus, or to
+     * {@code fallback} when no city offers any bonus at all.
+     *
+     * @param category the category to look up; {@code null} selects generic
+     * @param fallback the city to return when no bonus exists
+     * @return the city name; never {@code null}
+     */
+    public String findBestCity(String category, String fallback) {
+        CityBonus best = null;
+        CityBonus bestGeneric = null;
+        for (CityBonus b : bonuses) {
+            if (category != null && category.equalsIgnoreCase(b.category())) {
+                if (best == null || b.bonus().compareTo(best.bonus()) > 0) {
+                    best = b;
+                }
+            } else if (b.category() == null) {
+                if (bestGeneric == null || b.bonus().compareTo(bestGeneric.bonus()) > 0) {
+                    bestGeneric = b;
+                }
+            }
+        }
+        if (best != null) {
+            return best.cityName();
+        }
+        if (bestGeneric != null && bestGeneric.bonus().signum() > 0) {
+            return bestGeneric.cityName();
+        }
+        return fallback;
+    }
 }
