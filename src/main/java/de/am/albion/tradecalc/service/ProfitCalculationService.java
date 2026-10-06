@@ -23,8 +23,8 @@ import de.am.albion.tradecalc.service.calculator.ProfitStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,12 +57,10 @@ public class ProfitCalculationService {
         for (ProfitStrategy strategy : strategyBeans) {
             this.strategies.put(strategy.mode(), strategy);
         }
-        List<CalculationMode> missing = Arrays.stream(CalculationMode.values())
-                .filter(mode -> !this.strategies.containsKey(mode))
-                .toList();
+        EnumSet<CalculationMode> missing = EnumSet.allOf(CalculationMode.class);
+        missing.removeAll(strategies.keySet());
         if (!missing.isEmpty()) {
-            throw new IllegalStateException(
-                    "ProfitCalculationService is missing strategies for: " + missing);
+            throw new IllegalStateException("ProfitCalculationService is missing strategies for: " + missing);
         }
     }
 
@@ -76,18 +74,6 @@ public class ProfitCalculationService {
      * @return the calculated profit, or empty if no feasible result exists
      */
     public Optional<ProfitResult> calculate(CalculationMode mode, Recipe recipe, String homeCity, PriceLookup prices) {
-        ProfitStrategy strategy = strategies.get(mode);
-        if (strategy == null) {
-            throw new IllegalArgumentException("No strategy registered for mode: " + mode);
-        }
-        return strategy.calculate(recipe, homeCity, prices);
-    }
-
-    /**
-     * Returns the strategy registered for the given mode. Package-private —
-     * for tests that want to assert on dispatch.
-     */
-    ProfitStrategy strategyFor(CalculationMode mode) {
-        return strategies.get(mode);
+        return strategies.get(mode).calculate(recipe, homeCity, prices);
     }
 }

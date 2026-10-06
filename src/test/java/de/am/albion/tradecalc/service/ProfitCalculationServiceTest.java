@@ -18,7 +18,6 @@ package de.am.albion.tradecalc.service;
 import de.am.albion.tradecalc.domain.CalculationMode;
 import de.am.albion.tradecalc.domain.model.ProfitResult;
 import de.am.albion.tradecalc.domain.model.Recipe;
-import de.am.albion.tradecalc.service.calculator.CityBonusProvider;
 import de.am.albion.tradecalc.service.calculator.PriceLookup;
 import de.am.albion.tradecalc.service.calculator.ProfitStrategy;
 import org.junit.jupiter.api.Test;
@@ -37,7 +36,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ProfitCalculationServiceTest {
 
     /**
-     * Each {@link CalculationMode} routes to the matching strategy.
+     * Each {@link CalculationMode} routes to the matching strategy. The stub
+     * strategies encode their mode into the result's {@code city()} field,
+     * so dispatch can be observed end-to-end through the public API.
      */
     @Test
     void dispatchesEachModeToItsStrategy() {
@@ -46,9 +47,12 @@ class ProfitCalculationServiceTest {
         ProfitStrategy c = stubFor(CalculationMode.BEST_OF_ALL);
         ProfitCalculationService service = new ProfitCalculationService(List.of(a, b, c));
 
-        assertThat(service.strategyFor(CalculationMode.LOCAL_ONLY)).isSameAs(a);
-        assertThat(service.strategyFor(CalculationMode.LOCAL_BUY_BEST_REST)).isSameAs(b);
-        assertThat(service.strategyFor(CalculationMode.BEST_OF_ALL)).isSameAs(c);
+        assertThat(service.calculate(CalculationMode.LOCAL_ONLY, RECIPE, "Lymhurst", EMPTY))
+                .map(ProfitResult::city).contains("LOCAL_ONLY");
+        assertThat(service.calculate(CalculationMode.LOCAL_BUY_BEST_REST, RECIPE, "Lymhurst", EMPTY))
+                .map(ProfitResult::city).contains("LOCAL_BUY_BEST_REST");
+        assertThat(service.calculate(CalculationMode.BEST_OF_ALL, RECIPE, "Lymhurst", EMPTY))
+                .map(ProfitResult::city).contains("BEST_OF_ALL");
     }
 
     /**
@@ -65,23 +69,18 @@ class ProfitCalculationServiceTest {
                 .hasMessageContaining("LOCAL_BUY_BEST_REST");
     }
 
+    /** Minimal recipe with no materials — every stub returns empty for it. */
+    private static final Recipe RECIPE = new Recipe("T4_BOW", 4, null, null, List.of());
+
+    /** Stub {@link PriceLookup} the stubs ignore. */
+    private static final PriceLookup EMPTY = itemId -> java.util.Map.of();
+
     /**
-     * Tiny {@link ProfitStrategy} stub that just advertises a given mode.
-     * Calculation itself is not exercised here — that is covered by the
-     * dedicated strategy unit tests.
+     * Tiny {@link ProfitStrategy} stub that advertises its mode and tags the
+     * returned {@link ProfitResult#city()} with it, so dispatch tests can see
+     * which strategy the service picked.
      */
     private static ProfitStrategy stubFor(CalculationMode mode) {
-        CityBonusProvider noBonuses = new CityBonusProvider() {
-            @Override
-            public BigDecimal bonusFor(String city, String category) {
-                return BigDecimal.ZERO;
-            }
-
-            @Override
-            public String bestCityFor(String category, String fallback) {
-                return fallback;
-            }
-        };
         return new ProfitStrategy() {
             @Override
             public CalculationMode mode() {
@@ -90,7 +89,14 @@ class ProfitCalculationServiceTest {
 
             @Override
             public Optional<ProfitResult> calculate(Recipe recipe, String homeCity, PriceLookup prices) {
-                return Optional.empty();
+                return Optional.of(ProfitResult.builder()
+                        .itemId(recipe.itemId())
+                        .city(mode.name())
+                        .totalCost(BigDecimal.ZERO)
+                        .revenue(BigDecimal.ZERO)
+                        .profit(BigDecimal.ZERO)
+                        .profitRatio(BigDecimal.ZERO)
+                        .build());
             }
         };
     }

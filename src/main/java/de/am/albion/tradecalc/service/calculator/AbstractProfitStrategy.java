@@ -15,7 +15,6 @@
  */
 package de.am.albion.tradecalc.service.calculator;
 
-import de.am.albion.tradecalc.domain.CalculationMode;
 import de.am.albion.tradecalc.domain.model.MarketPrice;
 import de.am.albion.tradecalc.domain.model.ProfitResult;
 import de.am.albion.tradecalc.domain.model.Recipe;
@@ -36,15 +35,9 @@ import java.util.Optional;
  */
 abstract class AbstractProfitStrategy implements ProfitStrategy {
 
-    /**
-     * How many decimal places a profit / cost value carries in the result.
-     */
+    /** Decimal places carried by monetary fields in the result. */
     private static final int SCALE = 2;
 
-    /**
-     * Bonus source — must be supplied by the concrete strategy (so each
-     * strategy can decide which city to query).
-     */
     protected final CityBonusProvider bonuses;
 
     protected AbstractProfitStrategy(CityBonusProvider bonuses) {
@@ -67,7 +60,6 @@ abstract class AbstractProfitStrategy implements ProfitStrategy {
     /**
      * {@inheritDoc}
      *
-     * <p>Implementation:
      * <ol>
      *   <li>Compute raw material cost (sum of {@code quantity × buyPriceMax})</li>
      *   <li>Apply the city's refining bonus for each material's category</li>
@@ -83,23 +75,18 @@ abstract class AbstractProfitStrategy implements ProfitStrategy {
         BigDecimal rawCost = BigDecimal.ZERO;
         for (RecipeIngredient material : recipe.materials()) {
             String city = buyCityFor(material, homeCity, prices);
-            if (city == null) {
-                return Optional.empty();
-            }
-            BigDecimal buyPrice = buyPriceFor(material.itemId(), city, prices);
-            if (buyPrice == null) {
+            Map<String, MarketPrice> cityPrices = prices.pricesFor(material.itemId());
+            MarketPrice mp = city == null ? null : cityPrices.get(city);
+            if (mp == null || mp.buyPriceMax() == null) {
                 return Optional.empty();
             }
             BigDecimal refiningBonus = bonuses.bonusFor(city, recipe.refiningCategory());
-            BigDecimal effectiveUnitCost = buyPrice.multiply(BigDecimal.ONE.subtract(refiningBonus));
+            BigDecimal effectiveUnitCost = mp.buyPriceMax().multiply(BigDecimal.ONE.subtract(refiningBonus));
             rawCost = rawCost.add(effectiveUnitCost.multiply(BigDecimal.valueOf(material.quantity())));
         }
 
         String craftCity = craftCityFor(recipe, homeCity, prices);
-        if (craftCity == null) {
-            return Optional.empty();
-        }
-        MarketPrice craftPrice = prices.pricesFor(recipe.itemId()).get(craftCity);
+        MarketPrice craftPrice = craftCity == null ? null : prices.pricesFor(recipe.itemId()).get(craftCity);
         if (craftPrice == null || craftPrice.sellPriceMin() == null) {
             return Optional.empty();
         }
@@ -120,15 +107,5 @@ abstract class AbstractProfitStrategy implements ProfitStrategy {
                 .profit(profit.setScale(SCALE, RoundingMode.HALF_UP))
                 .profitRatio(profitRatio)
                 .build());
-    }
-
-    /**
-     * Returns the {@code buyPriceMax} for the given item in the given city,
-     * or {@code null} if no active buy-order exists in that city.
-     */
-    private static BigDecimal buyPriceFor(String itemId, String city, PriceLookup prices) {
-        Map<String, MarketPrice> cityPrices = prices.pricesFor(itemId);
-        MarketPrice mp = cityPrices.get(city);
-        return mp == null ? null : mp.buyPriceMax();
     }
 }

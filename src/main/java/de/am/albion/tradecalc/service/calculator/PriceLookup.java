@@ -20,9 +20,9 @@ import de.am.albion.tradecalc.domain.model.MarketPrice;
 import java.util.Map;
 
 /**
- * Read-only access to current market prices, keyed by item id. Implemented by
- * {@link de.am.albion.tradecalc.service.PriceService} in production and by a
- * simple map-backed stub in unit tests.
+ * Read-only access to current market prices, keyed by item id. Production
+ * callers wire this to {@link de.am.albion.tradecalc.service.PriceService};
+ * unit tests use a builder-backed stub.
  */
 public interface PriceLookup {
 
@@ -31,7 +31,7 @@ public interface PriceLookup {
      * without an active buy- or sell-order may be missing from the map.
      *
      * @param itemId the item id to look up
-     * @return immutable map keyed by city, possibly empty
+     * @return map keyed by city, possibly empty
      */
     Map<String, MarketPrice> pricesFor(String itemId);
 }
