@@ -1,0 +1,51 @@
+[
+  {
+    "itemId": "T4_BOW",
+    "tier": 4,
+    "craftingCategory": "Bögen, Stoff, Möbel",
+    "refiningCategory": "Holz",
+    "materials": [
+      { "itemId": "T4_PLANK", "quantity": 8, "buyPriceMax": null },
+      { "itemId": "T4_METALBAR", "quantity": 4, "buyPriceMax": null },
+      { "itemId": "T4_CLOTH", "quantity": 2, "buyPriceMax": null }
+    ]
+  },
+  {
+    "itemId": "T4_SWORD",
+    "tier": 4,
+    "craftingCategory": "Klingen, Rüstungen",
+    "refiningCategory": "Metall",
+    "materials": [
+      { "itemId": "T4_METALBAR", "quantity": 12, "buyPriceMax": null },
+      { "itemId": "T4_PLANK", "quantity": 4, "buyPriceMax": null },
+      { "itemId": "T4_LEATHER", "quantity": 2, "buyPriceMax": null }
+    ]
+  },
+  {
+    "itemId": "T4_PLANK",
+    "tier": 4,
+    "craftingCategory": null,
+    "refiningCategory": "Holz",
+    "materials": [
+      { "itemId": "T4_WOOD", "quantity": 2, "buyPriceMax": null }
+    ]
+  },
+  {
+    "itemId": "T4_METALBAR",
+    "tier": 4,
+    "craftingCategory": null,
+    "refiningCategory": "Metall",
+    "materials": [
+      { "itemId": "T4_ORE", "quantity": 2, "buyPriceMax": null }
+    ]
+  },
+  {
+    "itemId": "T4_LEATHER",
+    "tier": 4,
+    "craftingCategory": null,
+    "refiningCategory": "Häute",
+    "materials": [
+      { "itemId": "T4_HIDE", "quantity": 2, "buyPriceMax": null }
+    ]
+  }
+]

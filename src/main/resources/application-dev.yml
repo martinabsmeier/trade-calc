@@ -1,0 +1,11 @@
+logging:
+  level:
+    root: INFO
+    de.am.albion.tradecalc: DEBUG
+    org.springframework.cache: TRACE
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
