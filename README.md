@@ -16,15 +16,18 @@ for every craftable item in Albion Online. It takes the Royal City bonuses for r
 crafting into account, along with the latest `buyPriceMax` and `sellPriceMin` values from
 the Albion Online market (Europe server).
 
-For the full project concept, glossary, calculation modes, and the 10-phase
-implementation roadmap, see the [Project Concept](#project-concept) section below.
+For the full project concept, glossary and calculation modes, see the
+[Project Concept](#project-concept) section below.
 
 **Highlights:**
 
 - **Three calculation modes** — from "home city only" to "optimal city per stage".
 - **Live market data** — cached via Caffeine (15 min TTL, force-refresh via REST).
 - **Static configuration** — bonuses and recipes loaded from JSON files on the classpath.
-- **Web UI** — Thymeleaf + HTMX (Phase 8).
+- **Web UI** — Thymeleaf + HTMX dashboard with a lazy-loaded plan drawer.
+- **REST API + observability** — `POST /api/v1/profit/calculate`, request-id filter
+  with MDC, exponential-backoff retry on upstream outages, recipe-driven warmup
+  on startup.
 
 ---
 
@@ -108,9 +111,8 @@ mvn verify     # Unit + Integration + Coverage report (target/site/jacoco/)
 ```
 
 > Current unit-test count: **102** unit tests across **24** `*Test` classes,
-> plus **19** `*IT` integration tests across **6** `*IT` classes, in the
-> `domain`, `config`, `service`, `calculator` and `dataprovider` packages
-> (no Spring context for unit tests).
+> plus **19** `*IT` integration tests across **6** `*IT` classes. JaCoCo
+> enforces ≥ 80 % branch and ≥ 70 % line coverage on the `BUNDLE`.
 
 ### Test Strategy
 
@@ -150,18 +152,18 @@ trade-calc/
     ├── main/
     │   ├── java/de/am/albion/tradecalc/
     │   │   ├── TradeCalcApplication.java    # @SpringBootApplication
-    │   │   ├── config/                      # Properties classes (Phase 1)
-    │   │   ├── api/                         # REST endpoints (Phase 3)
-    │   │   ├── dataprovider/                # API adapter (Phase 3)
-    │   │   ├── repository/                  # In-memory indexes (Phase 2+)
-    │   │   ├── service/                     # Application logic (Phase 5+)
-    │   │   │   ├── PriceService.java                # Market data (Phase 3)
-    │   │   │   ├── RecipeService.java               # Recipe lookup (Phase 5)
-    │   │   │   ├── ProfitCalculationService.java    # Strategy dispatch (Phase 5)
-    │   │   │   ├── CraftingPlanService.java         # Step-by-step plan (Phase 6)
+    │   │   ├── config/                      # Properties classes
+    │   │   ├── api/                         # REST endpoints
+    │   │   ├── dataprovider/                # API adapter
+    │   │   ├── repository/                  # In-memory indexes
+    │   │   ├── service/                     # Application logic
+    │   │   │   ├── PriceService.java                # Market data
+    │   │   │   ├── RecipeService.java               # Recipe lookup
+    │   │   │   ├── ProfitCalculationService.java    # Strategy dispatch
+    │   │   │   ├── CraftingPlanService.java         # Step-by-step plan
     │   │   │   ├── PriceServiceAdapter.java         # PriceLookup adapter
-    │   │   │   └── calculator/             # Profit strategies (Phase 5)
-    │   │   └── domain/                      # Records / enums (Phase 2)
+    │   │   │   └── calculator/             # Profit strategies
+    │   │   └── domain/                      # Records / enums
     │   └── resources/
     │       ├── application.yml              # Main configuration
     │       ├── application-dev.yml          # Dev profile
@@ -172,28 +174,11 @@ trade-calc/
 
 ---
 
-## Implementation Progress
-
-| Phase | Content | Status |
-|---|---|:---:|
-| 0 | Verify project setup | ✅ |
-| 1 | Foundation (config, properties, actuator, cache) | ✅ |
-| 2 | Static data (domain records, JSON recipes, CityBonusRepository) | ✅ |
-| 3 | External API (AlbionDataApiClient + MarketJsonMapper) | ✅ |
-| 4 | REST API for calculation (`POST /api/v1/profit/calculate`) | ✅ |
-| 5 | Core calculation (ProfitCalculationService — Strategy pattern) | ✅ |
-| 6 | Crafting plan (`CraftingPlanService` + 4 step kinds) | ✅ |
-| 7 | REST-API for calculation | ⏳ |
-| 8 | Web UI (Thymeleaf + HTMX) | ⏳ |
-| 9 | Polish & Quality | ⏳ |
-
----
-
 ## Project Concept
 
 `trade-calc` implements a profit calculator for crafted items in **Albion Online** (Europe
-server). The full concept, glossary, calculation logic, data sources, user-interface
-spec, package structure, and phased roadmap are documented below.
+server). The full concept, glossary, calculation logic, data sources and package
+structure are documented below.
 
 ### Glossary
 
@@ -280,7 +265,7 @@ de.am.albion.tradecalc
 ├── api/                               # REST endpoints
 │   └── PriceController.java            # GET /api/v1/prices/{itemId}
 │
-├── ui/                                # Web UI (Thymeleaf) — Phase 8
+├── ui/                                # Web UI (Thymeleaf)
 │   ├── controller/
 │   │   └── DashboardController.java    # GET/POST / + GET /results + GET /plan
 │   └── dto/
@@ -303,7 +288,7 @@ de.am.albion.tradecalc
 │   ├── CityBonusRepository.java        # Loaded once from bonuses.json
 │   └── CityBonusRepositoryAdapter.java # CityBonusProvider for calculator package
 │
-├── observability/                     # Cross-cutting concerns (Phase 9)
+├── observability/                     # Cross-cutting concerns
 │   ├── MdcKeys.java                   # requestId key
 │   ├── RequestIdFilter.java             # OncePerRequestFilter — X-Request-Id + MDC
 │   └── MarketPriceWarmupService.java  # @EventListener(ApplicationReadyEvent)
@@ -312,10 +297,10 @@ de.am.albion.tradecalc
 │   ├── PriceService.java               # Market data
 │   ├── PriceServiceAdapter.java        # PriceLookup adapter for calculator
 │   ├── RecipeService.java              # Recipe lookup
-│   ├── ProfitCalculationService.java   # Strategy dispatch (Phase 5)
-│   ├── ProfitQueryService.java         # Ranked top-N query (Phase 7)
-│   ├── CraftingPlanService.java        # Step-by-step plan (Phase 6)
-│   └── calculator/                     # Profit strategies (Phase 5)
+│   ├── ProfitCalculationService.java   # Strategy dispatch
+│   ├── ProfitQueryService.java         # Ranked top-N query
+│   ├── CraftingPlanService.java        # Step-by-step plan
+│   └── calculator/                     # Profit strategies
 │       ├── ProfitStrategy.java         # Interface — one impl per CalculationMode
 │       ├── PriceLookup.java            # Read-only view on PriceService
 │       ├── CityBonusProvider.java      # Read-only view on CityBonusRepository
@@ -350,151 +335,33 @@ de.am.albion.tradecalc
 - **`config`** holds external configuration (API URL, cache settings).
 - **`domain/CalculationMode`** is a central enum so UI, API and service use the same values.
 
-### Implementation Roadmap
+## Features
 
-The project is delivered in **10 phases**. Each phase produces a runnable vertical slice.
+| Feature | Where | What it gives you |
+|---|---|---|
+| **Config layer** | `config/AlbionApiProperties`, `config/CacheProperties` | Externalised config via `@ConfigurationProperties`; no hard-coded URLs or magic strings. |
+| **Domain records** | `domain/model/*` (`Item`, `City`, `CityBonus`, `Recipe`, `MarketPrice`, `ProfitResult`, `CraftingPlan`, `CraftingStep`, `RecipeIngredient`) | Framework-agnostic value types — no Spring annotations on this package. |
+| **Static data** | `resources/bonuses.json`, `resources/recipes/index.json` | Royal City bonuses and crafting recipes, loaded once into a `final` field. |
+| **Live market data** | `dataprovider/albion/AlbionDataApiClient`, `service/PriceService` | `RestClient` against `albion-online-data.com` (v2 stats/prices endpoint, west shard), with hand-rolled exponential-backoff retry on transient failures. Per-item caching with 15 min TTL. |
+| **Profit calculation** | `service/ProfitCalculationService`, `service/calculator/*Strategy` | Three calculation modes (`LOCAL_ONLY`, `LOCAL_BUY_BEST_REST`, `BEST_OF_ALL`) dispatched via an `EnumMap` of Spring-injected strategies. Strategies are unit-testable without Spring. |
+| **Crafting plan** | `service/CraftingPlanService` | Walks the recipe tree bottom-up; emits `BUY` / `REFINE` / `CRAFT` / `SELL` steps that agree with the `ProfitResult`'s cities. |
+| **REST API** | `api/PriceController`, `api/ProfitController`, `api/dto/*`, `api/GlobalExceptionHandler` | `GET /api/v1/prices/{itemId}` and `POST /api/v1/profit/calculate` with validated DTOs and a `@RestControllerAdvice` for error responses. |
+| **Web UI** | `ui/controller/DashboardController`, `templates/*`, `static/css/site.css` | Thymeleaf + HTMX dashboard. Inline HTMX on the results table with a vanilla-JS fetch backup. |
+| **Caching** | `application.yml` (`cache-names: marketPrices, recipes, cityBonuses`), `@Cacheable` on the relevant services | Caffeine via Spring Cache abstraction; `/actuator/caches/{name}` exposes size, hit rate and evictions. |
+| **Observability** | `observability/MdcKeys`, `RequestIdFilter`, `MarketPriceWarmupService`, `logback-spring.xml` | `X-Request-Id` honoured and echoed, MDC propagation into logs, startup-time warmup of market prices for every recipe item. |
+| **CI** | `.github/workflows/build.yml` | `mvn -B verify` on Temurin JDK 21 for every push and PR to `main`; JaCoCo report uploaded as a build artifact. |
 
-#### Phase 0 — Verify project setup
-Confirm the skeleton is intact (`pom.xml`, `TradeCalcApplication`, package structure)
-before writing any code. *Verify:* `mvn -v` shows Java 21+ and Maven 3.9+.
+### Test Counters
 
-#### Phase 1 — Foundation
-- `application.yml` with cache config and `management.endpoints.web.exposure.include=caches,metrics`
-- `application-dev.yml` for verbose dev logs
-- `TradeCalcApplication` with `@SpringBootApplication`, `@EnableCaching`, `@EnableScheduling`
-- `config/AlbionApiProperties`, `config/CacheProperties`
-- `pom.xml` adds `spring-boot-starter-cache`, `spring-boot-starter-actuator`
-
-*Verify:* `mvn spring-boot:run` starts; `/actuator/health` returns `UP`.
-
-#### Phase 2 — Static data
-- `domain/CalculationMode` enum
-- `domain/model/*` records (`Item`, `City`, `CityBonus`, `Recipe`, `MarketPrice`,
-  `ProfitResult`, `CraftingPlan`, `CraftingStep`, `RecipeIngredient`)
-- `resources/bonuses.json` (7 cities) and `resources/recipes/` (5–10 example recipes)
-- `dataprovider/recipe/RecipeLoader` (loaded once into a `final` field;
-  per-item look-ups go through `service/RecipeService` which is
-  `@Cacheable("recipes")`)
-- `repository/CityBonusRepository` (loaded once from `bonuses.json`; per
-  look-up `@Cacheable("cityBonuses")`)
-
-*Verify:* unit test loads 3 recipes and asserts the indexes are consistent.
-
-#### Phase 3 — External API
-- `dataprovider/albion/AlbionDataApiClient` (`RestClient` against `albion-online-data.com`)
-- `dataprovider/albion/dto/MarketJson`
-- `dataprovider/albion/mapper/MarketJsonMapper`
-- `service/PriceService` caches `MarketPrice` per item under `marketPrices`
-- `api/PriceController` with `GET /api/v1/prices/{itemId}`
-
-*Verify:* live call against the real API (e.g. `T4_WOOD`) lands in the cache; a second
-call returns in single-digit ms.
-
-#### Phase 4 — Actuator cache stats
-- Caches declared in `application.yml` (`marketPrices`, `recipes`, `cityBonuses`)
-  with Caffeine `maximumSize` and `expireAfterWrite` derived from
-  `cache.market.*` via Spring property interpolation
-- `/actuator/caches/{name}` exposes size, hit rate and eviction counts
-- **Not yet wired:** `POST /api/v1/refresh` (planned for Phase 7 together with
-  the calculation endpoint so the UI can force a refresh in one round-trip)
-
-*Verify:* `/actuator/caches/marketPrices` shows size and hit rate after a
-`GET /api/v1/prices/T4_BOW`.
-
-#### Phase 5 — Core calculation ✅
-- `service/ProfitCalculationService` dispatches per `CalculationMode` via an
-  `EnumMap` populated from the Spring-injected `ProfitStrategy` beans.
-- One `@Component` per mode in `service/calculator/`: `LocalOnlyStrategy`,
-  `LocalBuyBestRestStrategy`, `BestOfAllStrategy`. They share the arithmetic
-  in `AbstractProfitStrategy` and only decide which cities to use for buying
-  and crafting.
-- Adding a new mode = adding a new strategy class — no changes to the service.
-- `PriceServiceAdapter` and `CityBonusRepositoryAdapter` are the only places
-  that know about Spring wiring on the calculator side.
-- `ProfitStrategy`, `PriceLookup`, `CityBonusProvider` are pure interfaces so
-  the strategies are unit-testable without any DI context.
-
-*Verify:* `mvn test` runs all strategy unit tests with deterministic prices
-against a builder-driven stub. Adding a fourth mode without registering a
-strategy fails fast at service construction.
-
-**Worked example (`T4_BOW`, mode `BEST_OF_ALL`, fixed prices):**
-
-| Step | Value |
-|---|---|
-| Materials | `T4_PLANK × 8` |
-| Buy price (`FortSterling`) | 720 |
-| Refining bonus (`FortSterling`, Holz) | 9.8 % |
-| Effective unit cost | 720 × (1 − 0.098) = 649.44 |
-| Material cost | 649.44 × 8 = 5 195.52 |
-| Crafting bonus (`Lymhurst`, Bögen, Stoff, Möbel) | 18.3 % |
-| `totalCost` | 5 195.52 × (1 − 0.183) = 4 244.74 |
-| Sell price (`Lymhurst`) | 18 450 |
-| `profit` | 18 450 − 4 244.74 = 14 205.26 |
-| `profitRatio` | 14 205.26 / 4 244.74 ≈ 3.3466 |
-
-#### Phase 6 — Crafting plan ✅
-- `domain/model/CraftingPlan` and `domain/model/CraftingStep` records are in place.
-- `service/CraftingPlanService` walks the recipe tree bottom-up and emits four
-  step kinds: `BUY` (raw material, no recipe), `REFINE` (intermediate whose own
-  recipe is walked first), `CRAFT` (root recipe output) and `SELL` (root output
-  in the craft city). Cities are taken from the `ProfitStrategy` registered for
-  the chosen `CalculationMode`, so the plan and the `ProfitResult` agree.
-- A `Deque`-driven visited stack guards against recipe cycles.
-- 4 unit tests cover: full T4_BOW tree in topological order, unknown item,
-  missing profit, and craft/sell city selection.
-
-*Verify (planned):* for `T4_BOW` (c) the plan returns "wood in Lymhurst →
-planks in Fort Sterling → sell bow in Lymhurst".
-
-> **Known simplification:** `CraftingStep.cost` is `BigDecimal.ZERO` on every
-> step; the monetary total lives on `CraftingPlan.profitSummary`. The upgrade
-> path is to thread per-action fees into the strategy and back onto the step.
-
-#### Phase 7 — REST API for calculation ✅
-- `api/ProfitController` (`POST /api/v1/profit/calculate`, body: `CalculationRequestDto`)
-- Request / response DTOs with `jakarta.validation`
-- `GlobalExceptionHandler` for error responses
-
-*Verify:* `curl -X POST` returns a JSON list of top items including `CraftingPlan`.
-
-#### Phase 8 — Web UI ✅
-- `ui/controller/DashboardController` (`GET /` for city / mode selection)
-- `ui/controller/ResultsController` (`GET /results` for the table)
-- Thymeleaf templates (`dashboard.html`, `results.html`, `_plan-drawer.html`)
-- Bootstrap 5 + HTMX for styling and dynamic updates
-
-*Verify:* browser flow — pick city → pick mode → calculate → click row → see plan.
-
-#### Phase 9 — Polish & quality ✅
-- Hand-rolled retry in `AlbionDataApiClient` — exponential backoff on
-  `ResourceAccessException`, 3 attempts, no new dependency. Catches only
-  transport-level failures; HTTP 4xx/5xx still bubble up.
-- `RequestIdFilter` (`OncePerRequestFilter`, `HIGHEST_PRECEDENCE`) reads an
-  incoming `X-Request-Id` header or mints a UUID, puts it into the MDC and
-  echoes it on the response. Logback picks it up via `%X{requestId}`.
-- `MarketPriceWarmupService` — `@EventListener(ApplicationReadyEvent)` walks
-  the recipe tree once on startup and pre-loads `priceService.getPrices(...)`
-  for every distinct item. Per-item failures are logged and swallowed so one
-  missing market entry doesn't block the rest.
-- New `observability/` package (`MdcKeys`, `RequestIdFilter`,
-  `MarketPriceWarmupService`). No resilience4j / spring-retry on the classpath.
-
-### Roadmap Ordering
-
-- **Phase 0 first** — checks the skeleton (pom, application class, packages) before any code is added.
-- **Bottom-up but functional** — data first (static), then external API, then calculation. After Phase 5 the logic is already correct — even without UI.
-- **Caching from the start** — `spring-boot-starter-cache` is enabled in Phase 1 so tests stay realistic.
-- **Testability before UI** — `ProfitCalculationService` is testable without Spring (Phase 5).
-- **Vertical slices** — every phase ships something visible or callable.
-
----
+The project ships with **102** unit tests across **24** `*Test` classes, plus
+**19** `*IT` integration tests across **6** `*IT` classes. JaCoCo gates enforce
+≥ 80 % branch and ≥ 70 % line coverage on the `BUNDLE`.
 
 ## Contributing
 
-1. Pick a phase from the roadmap above or open a new issue.
-2. Create a feature branch using the schema `feature/phase-X-short-name`.
-3. Open a PR referencing the phase and any roadmap changes.
+1. Pick a feature from the table above or open a new issue.
+2. Create a feature branch using the schema `feature/<short-name>`.
+3. Open a PR referencing the feature.
 
 **Code conventions:**
 
