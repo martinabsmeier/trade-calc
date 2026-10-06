@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('trade-calc – Results')}"></head>
+<body class="bg-body-tertiary">
+<nav th:replace="~{layout :: nav}"></nav>
+
+<main class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h1 class="h4 mb-0">Top items</h1>
+        <a class="btn btn-outline-secondary btn-sm" th:href="@{/}">← Back</a>
+    </div>
+    <p class="text-muted small">
+        Mode: <span class="badge text-bg-secondary" th:text="${mode.description}">BEST_OF_ALL</span>
+        · Home city: <strong th:text="${homeCity}">Lymhurst</strong>
+        · <span th:text="${#lists.size(items)}"></span> items
+    </p>
+
+    <div class="card">
+        <table class="table table-hover mb-0">
+            <thead>
+            <tr>
+                <th>Item</th>
+                <th class="text-end">Cost</th>
+                <th class="text-end">Revenue</th>
+                <th class="text-end">Profit</th>
+                <th class="text-end">Ratio</th>
+                <th>Sell in</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="entry : ${items}">
+                <td colspan="6" class="p-0">
+                    <button class="row-toggle btn btn-link text-decoration-none w-100 text-start px-3 py-2"
+                            type="button"
+                            th:attr="data-item-id=${entry.itemId()},data-mode=${mode.name()},data-home-city=${homeCity}">
+                        <div class="d-flex w-100 align-items-center gap-3">
+                            <span class="fw-semibold" th:text="${entry.itemId()}">T4_BOW</span>
+                            <span class="ms-auto text-muted" th:text="${#numbers.formatDecimal(entry.profit().totalCost(), 0, 2)}">1000</span>
+                            <span class="text-muted" th:text="${#numbers.formatDecimal(entry.profit().revenue(), 0, 2)}">3000</span>
+                            <span class="fw-semibold text-success"
+                                  th:text="${#numbers.formatDecimal(entry.profit().profit(), 0, 2)}">2000</span>
+                            <span class="badge bg-warning-subtle text-warning-emphasis"
+                                  th:text="${#numbers.formatPercent(entry.profit().profitRatio(), 1, 1)}">200%</span>
+                            <span class="text-muted" th:text="${entry.profit().city()}">Lymhurst</span>
+                        </div>
+                    </button>
+                    <div class="plan-slot px-3 pb-3" th:id="'plan-' + ${entry.itemId()}" hidden></div>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(items)}">
+                <td class="text-center text-muted py-4" colspan="6">
+                    No profitable recipes found for the current configuration.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<script defer src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script>
+    // ponytail: tiny vanilla fallback so plan rows expand even if HTMX fails to
+    // fetch (e.g. offline). A real backend-side swap is to use hx-target only.
+    document.addEventListener('click', (event) => {
+        const btn = event.target.closest('.row-toggle');
+        if (!btn) return;
+        const itemId = btn.getAttribute('data-item-id');
+        const mode = btn.getAttribute('data-mode');
+        const homeCity = btn.getAttribute('data-home-city');
+        const slot = document.getElementById('plan-' + itemId);
+        if (!slot) return;
+        if (!slot.hidden) {
+            slot.hidden = true;
+            slot.innerHTML = '';
+            return;
+        }
+        slot.hidden = false;
+        slot.innerHTML = '<div class="text-muted small">Loading plan…</div>';
+        fetch('/plan?itemId=' + encodeURIComponent(itemId)
+            + '&mode=' + encodeURIComponent(mode)
+            + '&homeCity=' + encodeURIComponent(homeCity))
+            .then(r => r.text())
+            .then(html => { slot.innerHTML = html; })
+            .catch(() => { slot.innerHTML = '<div class="text-danger small">Failed to load plan.</div>'; });
+    });
+</script>
+</body>
+</html>

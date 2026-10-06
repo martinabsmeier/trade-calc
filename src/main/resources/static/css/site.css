@@ -1,0 +1,13 @@
+/*
+ * Tiny project-local overrides. Bootstrap 5 is loaded via the layout template.
+ * ponytail: kept intentionally small; anything more specific belongs in a
+ * proper design system that this project does not need.
+ */
+.row-toggle:hover {
+    background-color: rgba(13, 110, 253, 0.06);
+}
+
+.plan-slot {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}

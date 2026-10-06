@@ -24,7 +24,7 @@ implementation roadmap, see the [Project Concept](#project-concept) section belo
 - **Three calculation modes** — from "home city only" to "optimal city per stage".
 - **Live market data** — cached via Caffeine (15 min TTL, force-refresh via REST).
 - **Static configuration** — bonuses and recipes loaded from JSON files on the classpath.
-- **Web UI** — Thymeleaf + HTMX (planned from Phase 8 onward).
+- **Web UI** — Thymeleaf + HTMX (Phase 8).
 
 ---
 
@@ -108,7 +108,7 @@ mvn verify     # Unit + Integration + Coverage report (target/site/jacoco/)
 ```
 
 > Current unit-test count: **97** unit tests across **21** `*Test` classes,
-> plus **12** `*IT` integration tests across **4** `*IT` classes, in the
+> plus **17** `*IT` integration tests across **5** `*IT` classes, in the
 > `domain`, `config`, `service`, `calculator` and `dataprovider` packages
 > (no Spring context for unit tests).
 
@@ -280,7 +280,12 @@ de.am.albion.tradecalc
 ├── api/                               # REST endpoints
 │   └── PriceController.java            # GET /api/v1/prices/{itemId}
 │
-├── ui/                                # Web UI (Thymeleaf) — Phase 8 (not yet)
+├── ui/                                # Web UI (Thymeleaf) — Phase 8
+│   ├── controller/
+│   │   └── DashboardController.java    # GET/POST / + GET /results + GET /plan
+│   └── dto/
+│       ├── DashboardForm.java          # Form backing bean
+│       └── ResultsView.java            # Results page model
 │   ├── controller/                     # planned
 │   └── dto/                            # planned
 │
@@ -448,7 +453,7 @@ planks in Fort Sterling → sell bow in Lymhurst".
 
 *Verify:* `curl -X POST` returns a JSON list of top items including `CraftingPlan`.
 
-#### Phase 8 — Web UI
+#### Phase 8 — Web UI ✅
 - `ui/controller/DashboardController` (`GET /` for city / mode selection)
 - `ui/controller/ResultsController` (`GET /results` for the table)
 - Thymeleaf templates (`dashboard.html`, `results.html`, `_plan-drawer.html`)
