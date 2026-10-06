@@ -104,6 +104,35 @@ class BestOfAllStrategyTest {
     }
 
     /**
+     * Two cities offer a sell price — the comparator lambda must run so the
+     * city with the higher crafting bonus wins.
+     */
+    @Test
+    void multipleSellCities_higherCraftBonusWins() {
+        Recipe recipe = new Recipe("T4_BOW", 4, "Bögen, Stoff, Möbel", "Holz",
+                List.of(new RecipeIngredient("T4_PLANK", 8, null)));
+        StubCityBonusProvider bonuses = StubCityBonusProvider.builder()
+                .bonus("FortSterling", "Holz", new BigDecimal("0.0"))
+                .bonus("Lymhurst", "Holz", new BigDecimal("0.0"))
+                .bonus("Lymhurst", "Bögen, Stoff, Möbel", new BigDecimal("0.183"))
+                .bonus("Martlock", "Bögen, Stoff, Möbel", new BigDecimal("0.250"))
+                .bestCityFor("Bögen, Stoff, Möbel", "Martlock")
+                .fallback("Lymhurst")
+                .build();
+        PriceLookup prices = StubPriceLookup.builder()
+                .city("T4_PLANK", price("T4_PLANK", "Lymhurst", "780", null))
+                .city("T4_BOW", price("T4_BOW", "Lymhurst", null, "18450"))
+                .city("T4_BOW", price("T4_BOW", "Martlock", null, "18450"))
+                .build();
+
+        Optional<ProfitResult> result = new BestOfAllStrategy(bonuses).calculate(recipe, "Lymhurst", prices);
+
+        assertThat(result).isPresent();
+        // Martlock wins because its crafting bonus (0.250) is higher than Lymhurst's (0.183).
+        assertThat(result.get().city()).isEqualTo("Martlock");
+    }
+
+    /**
      * The strategy reports its mode as {@link CalculationMode#BEST_OF_ALL}.
      */
     @Test

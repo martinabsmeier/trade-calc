@@ -52,6 +52,20 @@ class CityBonusRepositoryTest {
     }
 
     /**
+     * Repository variant whose first category entry already wins, so the
+     * loop's "second entry is NOT strictly greater than current" branch
+     * is reachable.
+     */
+    private CityBonusRepository repoDescendingSameCategory() {
+        return CityBonusRepository.forTest("""
+                [
+                  {"cityName":"Martlock","category":"Häute","bonus":0.20},
+                  {"cityName":"Martlock","category":"Häute","bonus":0.10}
+                ]
+                """);
+    }
+
+    /**
      * Multiple bonuses for the same category are accepted as long as the JSON
      * parses — repository doesn't pre-validate, callers do.
      */
@@ -158,5 +172,20 @@ class CityBonusRepositoryTest {
 
         assertThat(bonus).isNotNull();
         assertThat(bonus.bonus()).isEqualByComparingTo("0.183");
+    }
+
+    /**
+     * When a later entry's value is NOT greater than the current best,
+     * the loop must keep the earlier (larger) entry — both sides of the
+     * {@code categoryMatch == null || bonus > current} test must be reached.
+     */
+    @Test
+    void findBestBonus_lowerLaterBonusKeepsEarlier() {
+        CityBonusRepository r = repoDescendingSameCategory();
+
+        CityBonus bonus = r.findBestBonus("Martlock", "Häute");
+
+        assertThat(bonus).isNotNull();
+        assertThat(bonus.bonus()).isEqualByComparingTo("0.20");
     }
 }
