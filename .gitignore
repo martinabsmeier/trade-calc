@@ -2,3 +2,6 @@
 
 .idea
 /target
+
+# local data caches (regenerated via scripts/)
+/data/raw/
