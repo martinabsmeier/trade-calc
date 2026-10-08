@@ -1,0 +1,107 @@
+[
+  {
+    "city": "Lymhurst",
+    "generalRefining": 0.18,
+    "generalCrafting": 0.18,
+    "refining": [
+      { "category": "Fiber", "bonus": 0.40 }
+    ],
+    "crafting": [
+      { "category": "Sword", "bonus": 0.15 },
+      { "category": "Bow", "bonus": 0.15 },
+      { "category": "Arcane Staff", "bonus": 0.15 },
+      { "category": "Leather Hood", "bonus": 0.15 },
+      { "category": "Leather Shoes", "bonus": 0.15 },
+      { "category": "Raw Goose", "bonus": 0.10 },
+      { "category": "Off-Hand", "bonus": 0.10 },
+      { "category": "Potion", "bonus": 0.10 }
+    ]
+  },
+  {
+    "city": "Martlock",
+    "generalRefining": 0.18,
+    "generalCrafting": 0.18,
+    "refining": [
+      { "category": "Hide", "bonus": 0.40 }
+    ],
+    "crafting": [
+      { "category": "Axe", "bonus": 0.15 },
+      { "category": "Quarterstaff", "bonus": 0.15 },
+      { "category": "Frost Staff", "bonus": 0.15 },
+      { "category": "Plate Boots", "bonus": 0.15 },
+      { "category": "Raw Beef", "bonus": 0.15 },
+      { "category": "Off-Hand", "bonus": 0.25 },
+      { "category": "Potion", "bonus": 0.10 }
+    ]
+  },
+  {
+    "city": "Bridgewatch",
+    "generalRefining": 0.18,
+    "generalCrafting": 0.18,
+    "refining": [
+      { "category": "Stone", "bonus": 0.40 }
+    ],
+    "crafting": [
+      { "category": "Crossbow", "bonus": 0.15 },
+      { "category": "Dagger", "bonus": 0.15 },
+      { "category": "Cursed Staff", "bonus": 0.15 },
+      { "category": "Plate Armor", "bonus": 0.15 },
+      { "category": "Cloth Sandals", "bonus": 0.15 },
+      { "category": "Raw Goat", "bonus": 0.10 },
+      { "category": "Off-Hand", "bonus": 0.10 },
+      { "category": "Potion", "bonus": 0.10 }
+    ]
+  },
+  {
+    "city": "Thetford",
+    "generalRefining": 0.18,
+    "generalCrafting": 0.18,
+    "refining": [
+      { "category": "Ore", "bonus": 0.40 }
+    ],
+    "crafting": [
+      { "category": "Mace", "bonus": 0.15 },
+      { "category": "Nature Staff", "bonus": 0.15 },
+      { "category": "Fire Staff", "bonus": 0.15 },
+      { "category": "Raw Pork", "bonus": 0.15 },
+      { "category": "Off-Hand", "bonus": 0.10 },
+      { "category": "Potion", "bonus": 0.10 }
+    ]
+  },
+  {
+    "city": "Fort Sterling",
+    "generalRefining": 0.18,
+    "generalCrafting": 0.18,
+    "refining": [
+      { "category": "Wood", "bonus": 0.40 }
+    ],
+    "crafting": [
+      { "category": "Cape", "bonus": 0.15 },
+      { "category": "Bag", "bonus": 0.15 },
+      { "category": "Raw Chicken", "bonus": 0.15 },
+      { "category": "Raw Mutton", "bonus": 0.15 },
+      { "category": "Hammer", "bonus": 0.15 },
+      { "category": "Spear", "bonus": 0.15 },
+      { "category": "Holy Staff", "bonus": 0.15 },
+      { "category": "Plate Helmet", "bonus": 0.15 },
+      { "category": "Cloth Robe", "bonus": 0.15 },
+      { "category": "Off-Hand", "bonus": 0.10 },
+      { "category": "Potion", "bonus": 0.10 }
+    ]
+  },
+  {
+    "city": "Caerleon",
+    "generalRefining": 0.18,
+    "generalCrafting": 0.18,
+    "refining": [],
+    "crafting": [
+      { "category": "Gathering Gear", "bonus": 0.15 },
+      { "category": "Tool", "bonus": 0.15 },
+      { "category": "Food", "bonus": 0.15 },
+      { "category": "War Gloves", "bonus": 0.15 },
+      { "category": "Shapeshifter Staff", "bonus": 0.15 },
+      { "category": "Off-Hand", "bonus": 0.10 },
+      { "category": "Potion", "bonus": 0.10 }
+    ]
+  }
+]

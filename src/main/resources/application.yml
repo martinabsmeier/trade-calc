@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: trade-calc
+  cache:
+    type: simple
+    cache-names:
+      - recipes
+
+logging:
+  level:
+    root: INFO
+    de.am.albion.tradecalc: INFO
