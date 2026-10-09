@@ -65,6 +65,7 @@ public class MaterialCostService {
             BigDecimal unitPrice = stats == null ? null : stats.priceByQuality().get(MATERIAL_QUALITY);
             BigDecimal lineCost = unitPrice == null
                 ? null
+                // Commercial rounding (HALF_UP) per project convention, money scale 2.
                 : unitPrice.multiply(BigDecimal.valueOf(ingredient.count()))
                     .setScale(2, RoundingMode.HALF_UP);
             lines.add(new MaterialCostLine(ingredient.item(), ingredient.count(), unitPrice, lineCost));

@@ -114,6 +114,7 @@ public class PriceService {
         if (totalUnits == 0) {
             return null;
         }
+        // Commercial rounding (HALF_UP) per project convention: units scale 1, money scale 2.
         BigDecimal unitsPerDay = BigDecimal.valueOf(totalUnits)
             .divide(BigDecimal.valueOf(properties.historyDays()), 1, RoundingMode.HALF_UP);
         Map<Integer, BigDecimal> prices = new LinkedHashMap<>();

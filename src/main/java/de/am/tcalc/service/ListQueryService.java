@@ -128,6 +128,7 @@ public class ListQueryService {
         int to = Math.min(size, rows.size());
         return rows.subList(0, to).stream()
             .map(row -> new ListRow(row.marketItemId(), row.name(), row.tier(), row.enchantmentLevel(),
+                // Commercial rounding (HALF_UP), re-applied defensively to the service output.
                 row.unitsPerDay().setScale(1, RoundingMode.HALF_UP), row.price()))
             .toList();
     }
