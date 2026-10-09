@@ -5,3 +5,6 @@
 
 # local data caches (regenerated via scripts/)
 /data/raw/
+
+# macOS metadata
+.DS_Store

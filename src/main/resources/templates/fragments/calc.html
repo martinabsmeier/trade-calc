@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="calc" th:object="${market}" class="calc">
+  <h2 th:if="${market != null}" th:text="${marketItemId} + ' — Marktpreis Qual.' + ${quality}"></h2>
+  <p th:if="${market != null}">
+    Preis:
+    <span th:text="${market.priceByQuality != null
+                     and market.priceByQuality.containsKey(quality)
+                     ? market.priceByQuality.get(quality) : '—'}"></span> Silber,
+    Anzahl/Tag: <span th:text="${market != null ? market.unitsPerDay : '—'}"></span>
+  </p>
+
+  <h3>Berechnen — Variante 1: Materialkauf in der gewählten Stadt</h3>
+  <div th:if="${materials != null}" th:with="cost=${materials}">
+    <table>
+      <thead>
+      <tr><th>Material</th><th>Anzahl</th><th>Stückpreis</th><th>Kosten</th></tr>
+      </thead>
+      <tbody>
+      <tr th:each="line : ${cost.lines}">
+        <td th:text="${line.item}"></td>
+        <td th:text="${line.count}"></td>
+        <td th:text="${line.unitPrice != null ? line.unitPrice : '—'}"></td>
+        <td th:text="${line.lineCost != null ? line.lineCost : '—'}"></td>
+      </tr>
+      </tbody>
+      <tfoot>
+      <tr><th colspan="3">Gesamt</th>
+        <td th:text="${cost.total != null ? cost.total : 'keine Marktdaten'}"></td></tr>
+      </tbody>
+    </table>
+    <p class="muted">Materialien werden als Sell-Order-Kauf in <span
+      th:text="${cost.location}"></span> gehandelt, Qualität „Normal".</p>
+  </div>
+  <p th:if="${materials == null}">Kein Rezept bekannt.</p>
+
+  <!-- ponytail: Variante 2 (Rohmaterial + Veredelung in der Bonus-Stadt) folgt in der
+       Calculator-Phase; der Fokus-Vermerk der Spec kommt samt der Gewinnzeile. -->
+  <p class="muted">Variante 2 (Veredelung vom Rohmaterial in der Bonus-Stadt) folgt.</p>
+</div>
+</body>
+</html>

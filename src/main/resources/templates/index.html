@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>trade-calc</title>
+  <script th:src="@{/js/htmx.min.js}"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 1rem; }
+    table { border-collapse: collapse; min-width: 40rem; }
+    th, td { border: 1px solid #ccc; padding: 0.25rem 0.6rem; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    .filters select, .filters label { margin-right: 1rem; }
+    #calc { margin-top: 1rem; }
+    .muted { color: #888; }
+  </style>
+</head>
+<body>
+<h1>trade-calc</h1>
+
+<form id="filters" class="filters">
+  <label>Stadt
+    <select name="city">
+      <option th:each="c : ${cities}" th:value="${c}" th:text="${c}"
+              th:selected="${c == 'Lymhurst'}"></option>
+    </select>
+  </label>
+  <label>Kategorie
+    <select name="category" hx-get="/subcats" hx-target="#subcategory-select"
+            hx-trigger="change">
+      <option th:value="${all}" th:text="${all}"></option>
+      <option th:each="c : ${categories}" th:value="${c}" th:text="${c}"></option>
+    </select>
+  </label>
+  <label>Unterkategorie <span id="subcategory-select">
+    <select name="subcategory">
+      <option th:value="${all}" th:text="${all}"></option>
+    </select>
+  </span></label>
+  <label>Qualität
+    <select name="quality">
+      <option th:each="q : ${qualities}" th:value="${q.key}" th:text="${q.value}"
+              th:selected="${q.key == 1}"></option>
+    </select>
+  </label>
+  <label>Anzahl
+    <select name="size">
+      <option th:each="s : ${sizes}" th:value="${s}" th:text="${s}"
+              th:selected="${s == 25}"></option>
+    </select>
+  </label>
+</form>
+
+<div id="result"
+     hx-get="/list" hx-trigger="load, change from:#filters"
+     hx-include="#filters select">
+</div>
+
+<div id="calc"></div>
+
+</body>
+</html>

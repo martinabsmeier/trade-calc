@@ -9,7 +9,7 @@
 
     <Loggers>
         <!-- Application loggers: leave open for tuning per package. -->
-        <Logger name="de.am.albion.tradecalc" level="INFO" additivity="false">
+        <Logger name="de.am.tcalc" level="INFO" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
 

@@ -1,60 +1,67 @@
+# CI: regenerate recipes.json from the ao-bin-dumps raw data, then verify.
+# The raw dumps (~110 MB) are cached in data/raw/ and only downloaded when missing.
 name: build
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
 
 jobs:
-  verify:
-    name: mvn verify (JDK 21)
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-
-      - name: Cache build recipe data
+      - name: Restore raw dump cache
         uses: actions/cache@v4
         with:
           path: data/raw
-          key: albion-bin-dumps-${{ hashFiles('scripts/build_recipes.py') }}
-          restore-keys: |
-            albion-bin-dumps-
+          key: ao-bin-dumps-v1
 
-      - name: Fetch raw recipe data
-        if: steps.cache.outputs.cache-hit != 'true'
-        shell: bash
+      - name: Download ao-bin-dumps (items.json + localization.json) if not cached
         run: |
           mkdir -p data/raw
-          curl -fsSL -o data/raw/items.json \
-            https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/items.json
-          # localization.json is ~90 MB; only needed when rebuilding recipes. Skip
-          # from the build pipeline to keep CI fast — recipes.json is committed.
+          curl -fL --retry 3 -o data/raw/items.json \
+            https://github.com/ao-data/ao-bin-dumps/raw/master/items.json
+          curl -fL --retry 3 -o data/raw/localization.json \
+            https://github.com/ao-data/ao-bin-dumps/raw/master/localization.json
 
-      - name: Build recipes
-        run: python3 scripts/build_recipes.py
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
-      - name: Verify (compile + unit + integration tests + coverage gates)
-        run: mvn -B verify
+      - name: Regenerate recipes.json
+        run: python3 -I scripts/build_recipes.py
 
-      - name: Upload JaCoCo coverage report
-        if: always()
+      - name: Commit regenerated recipes.json if changed
+        run: |
+          if ! git diff --quiet -- src/main/resources/data/recipes.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add src/main/resources/data/recipes.json
+            git commit -m "chore(data): regenerate recipes.json from ao-bin-dumps [skip ci]"
+            git push
+          fi
+
+      - name: Set up Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build and verify
+        run: mvn --batch-mode verify
+
+      - name: Upload test reports on failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: jacoco-report
-          path: target/site/jacoco
-          retention-days: 14
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+          retention-days: 7

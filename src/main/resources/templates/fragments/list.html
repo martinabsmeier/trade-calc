@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<body>
+<table id="items" th:fragment="list">
+  <thead>
+  <tr>
+    <th>Artikel</th><th>Anzahl</th><th>Preis</th><th>Stufe</th><th>Verzauberung</th><th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr th:fragment="rows" th:each="r : ${rows}" th:object="${r}">
+    <td th:text="*{name}"></td>
+    <td th:text="*{unitsPerDay}"></td>
+    <td th:text="*{price != null ? price : '—'}"></td>
+    <td th:text="*{tier}"></td>
+    <td th:text="*{enchantmentLevel}"></td>
+    <td>
+      <!-- City & quality ride along from the filter form; city is the sale/buy city. -->
+      <button th:attr="hx-get=${'/calc?itemId=' + r.marketItemId
+                          + (r.enchantmentLevel > 0 ? '&enchantmentLevel=' + r.enchantmentLevel : '')}"
+              hx-include="#filters select" hx-target="#calc"
+              hx-swap="innerHTML show:#calc:top">Berechnen</button>
+    </td>
+  </tr>
+  </tbody>
+</table>
+<p class="muted" th:if="${#lists.isEmpty(rows)}">Keine Artikel gefunden.</p>
+</body>
+</html>

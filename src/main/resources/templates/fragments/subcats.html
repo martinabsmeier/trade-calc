@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<body>
+<select th:fragment="options" name="subcategory">
+  <option th:value="${all}" th:text="${all}"></option>
+  <option th:each="s : ${subcategories}" th:value="${s}" th:text="${s}"></option>
+</select>
+</body>
+</html>

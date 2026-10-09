@@ -5,8 +5,18 @@ spring:
     type: simple
     cache-names:
       - recipes
+      - prices
+      - materialcosts
+
+price:
+  base-url: https://europe.albion-online-data.com
+  history-path: /api/v2/stats/history
+  history-days: 28
+  qualities: "1,2,3,4"
+  connect-timeout-ms: 2000
+  read-timeout-ms: 5000
 
 logging:
   level:
     root: INFO
-    de.am.albion.tradecalc: INFO
+    de.am.tcalc: INFO
