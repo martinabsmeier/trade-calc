@@ -53,14 +53,15 @@ public class RecipeLoader {
             throw new IllegalStateException("Recipe book not found at " + CLASSPATH_LOCATION);
         }
         try {
-            this.recipes = objectMapper.readValue(resource.getInputStream(), new TypeReference<>() {});
+            this.recipes = List.copyOf(objectMapper.readValue(resource.getInputStream(), new TypeReference<>() {}));
         } catch (IOException ex) {
             throw new UncheckedIOException("Failed to read " + CLASSPATH_LOCATION, ex);
         }
         log.info("Loaded {} recipes from {}", recipes.size(), CLASSPATH_LOCATION);
     }
 
+    /** All recipes; a defensive copy (SpotBugs EI_EXPOSE_REP) — call sites keep it read-only. */
     public List<Recipe> all() {
-        return recipes;
+        return List.copyOf(recipes);
     }
 }

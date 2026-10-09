@@ -88,19 +88,26 @@ public class PriceService {
         return stats(List.of(itemId), location).get(itemId);
     }
 
+    /** Per-quality accumulator: total units and Σ(units × price). */
+    private record QualitySum(BigDecimal units, BigDecimal value) {
+
+        QualitySum add(BigDecimal unitCount, BigDecimal price) {
+            return new QualitySum(units.add(unitCount), value.add(unitCount.multiply(price)));
+        }
+    }
+
     private ItemPriceStats compute(String itemId, List<MarketHistoryItem> seriesList) {
         long totalUnits = 0;
-        Map<Integer, BigDecimal[]> perQuality = new HashMap<>(); // [units, Σ(count × price)]
+        Map<Integer, QualitySum> perQuality = new HashMap<>();
         for (MarketHistoryItem series : seriesList) {
             for (MarketHistoryItem.MarketHistoryEntry e : series.data()) {
                 if (e.itemCount() <= 0 || e.avgPrice() == null) {
                     continue;
                 }
                 BigDecimal units = BigDecimal.valueOf(e.itemCount());
-                BigDecimal[] sums = perQuality.computeIfAbsent(series.quality(), k -> new BigDecimal[] {
-                    BigDecimal.ZERO, BigDecimal.ZERO});
-                sums[0] = sums[0].add(units);
-                sums[1] = sums[1].add(units.multiply(e.avgPrice()));
+                perQuality.put(series.quality(), perQuality
+                    .getOrDefault(series.quality(), new QualitySum(BigDecimal.ZERO, BigDecimal.ZERO))
+                    .add(units, e.avgPrice()));
                 totalUnits += e.itemCount();
             }
         }
@@ -110,8 +117,8 @@ public class PriceService {
         BigDecimal unitsPerDay = BigDecimal.valueOf(totalUnits)
             .divide(BigDecimal.valueOf(properties.historyDays()), 1, RoundingMode.HALF_UP);
         Map<Integer, BigDecimal> prices = new LinkedHashMap<>();
-        perQuality.forEach((quality, sums) -> prices.put(quality,
-            sums[1].divide(sums[0], 2, RoundingMode.HALF_UP)));
+        perQuality.forEach((quality, sum) -> prices.put(quality,
+            sum.value().divide(sum.units(), 2, RoundingMode.HALF_UP)));
         return new ItemPriceStats(itemId, unitsPerDay, prices);
     }
 }

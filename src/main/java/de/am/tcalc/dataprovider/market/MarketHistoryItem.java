@@ -33,6 +33,11 @@ public record MarketHistoryItem(
     @JsonProperty("data") List<MarketHistoryEntry> data
 ) {
 
+    /** Compact constructor: the data list is defensively copied so no caller can mutate ours. */
+    public MarketHistoryItem {
+        data = data == null ? List.of() : List.copyOf(data);
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record MarketHistoryEntry(
         @JsonProperty("item_count") int itemCount,
