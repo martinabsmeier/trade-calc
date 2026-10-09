@@ -19,7 +19,8 @@ Implemented so far:
   - `unitsPerDay` = Σ item_count ÷ 28, summed over all qualities
   - `priceByQuality` = volume-weighted average price per quality level 1–4
     (Σ item_count × avg_price ÷ Σ item_count; a quality with zero sales has no entry)
-  - `BigDecimal` money math (price scale 2, units scale 1, `HALF_UP`);
+  - `BigDecimal` money math (price scale 2, units scale 1, commercial rounding
+    `HALF_UP`);
     `@Cacheable("prices")` on the (item ids, city) pair.
 
 Not yet implemented (see spec): REST controllers, the Thymeleaf/HTMX list view and

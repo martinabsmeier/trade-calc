@@ -28,6 +28,9 @@ Und so weiter bis alle bögen aufgelistet sind.
 Anzahl = die durchschnittlich verkaufte Anzahl pro Tag in den letzten 4 Wochen
 Preis = der durchschnittliche Preis in den letzten 4 Wochen
 
+Rundung durchgängig **kaufmännisch** (`RoundingMode.HALF_UP`): Anzahl mit 1 Nachkommastelle,
+Preise und Geldbeträge mit 2 Nachkommastellen (`BigDecimal` in der Umsetzung).
+
 Für Kategorie bzw. Unterkategorie kann auch "Alle" gewählt werden
 Per default werden die ersten 25 Artikel in Listenform angezeigt, über eine Drop Down box kann die angezeigte Anzahl 
 eingestellt werden. Zu Auswahl steht 25 (Default), 50 und 100
@@ -67,7 +70,7 @@ somit niedriger sein kann.
   Premium ja/nein (Default ja), Sell-Order/Direktverkauf an Kauforder (Default Sell-Order).
 - **Werkstatt-/Stationsgebühren bleiben unberücksichtigt** (nutzungsbasiert, je Kraftwerk unterschiedlich) —
   Upgrade-Pfad: freier Parameter.
-- Die Gewinnberechnung rechnet mit `BigDecimal` (Scale 2, `RoundingMode.HALF_UP`).
+- Die Gewinnberechnung rechnet mit `BigDecimal` (Scale 2, kaufmännisch `RoundingMode.HALF_UP`).
 
 
 ## Datenquellen (Extern)
