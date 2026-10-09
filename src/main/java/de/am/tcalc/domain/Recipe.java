@@ -23,15 +23,20 @@ import java.util.List;
  * Pure value type describing one crafting recipe: which output item is crafted from which ingredients, plus
  * the crafting parameters (time, focus, silver). Framework-free.
  *
- * @param id item id, e.g. "T4_2H_LONGBOW"
+ * @param id item id, e.g. "T4_2H_LONGBOW" — without the dump's {@code @N} enchantment suffix;
+ *     enchanted variants share the id and are distinguished by {@code enchantmentLevel}
  * @param tier tier (1..8), null for prototype items
- * @param name human-readable display name (German preferred, English fallback)
+ * @param name human-readable display name (official German localization from the item dump;
+ *     English fallback for the few unlocalized prototype entries)
  * @param category crafting category, e.g. "bow", "plate_armor"
  * @param shopCategory top-level shop category, e.g. "weapons"
- * @param shopSub1 first shop subcategory
- * @param shopSub2 second shop subcategory
- * @param enchantmentLevel null for base recipes, 1..3 for enchanted variants
- * @param refiningCategory the Royal-City bonus category this recipe's base ingredients belong to, e.g. "Wood"
+ * @param shopSub1 first shop subcategory — German display label, e.g. "Bögen"
+ * @param shopSub2 second shop subcategory — German display label, e.g. "Langbögen";
+ *     null for items without one (bags, satchels …)
+ * @param enchantmentLevel null for base recipes, 1..4 for enchanted variants
+ * @param refiningCategory the Royal-City bonus category of the dominant refined ingredient
+ *     ("Wood", "Fiber", "Hide", "Ore", "Stone"), chosen heuristically by the build script —
+ *     the basis for spec "Variante 2" refining-chain routing
  * @param craftingTime time in seconds
  * @param craftingFocus focus points consumed
  * @param silver silver cost

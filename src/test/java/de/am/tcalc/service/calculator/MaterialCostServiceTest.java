@@ -17,15 +17,16 @@ package de.am.tcalc.service.calculator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+
 import de.am.tcalc.config.PriceProperties;
 import de.am.tcalc.dataprovider.market.MarketHistoryItem;
 import de.am.tcalc.dataprovider.market.MarketPriceHistoryClient;
-import de.am.tcalc.domain.MaterialCost;
 import de.am.tcalc.dataprovider.recipe.RecipeLoader;
+import de.am.tcalc.domain.MaterialCost;
 import de.am.tcalc.service.PriceService;
 import de.am.tcalc.service.RecipeService;
+import de.am.tcalc.testsupport.MarketHistoryFixtures;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -42,12 +43,8 @@ class MaterialCostServiceTest {
     @Test
     void longbowCostIsCountTimesUnitPriceOfNormalQuality() {
         loader.load();
-        MarketPriceHistoryClient stub = (ids, location) -> {
-            long count = ids.get(0).endsWith("PLANKS") ? 100 : 1000;
-            return List.of(new MarketHistoryItem(location, ids.get(0), 1,
-                List.of(new MarketHistoryItem.MarketHistoryEntry(
-                    280, new BigDecimal(count == 100 ? "10" : "1"), "2026-10-09T12:00:00"))));
-        };
+        MarketPriceHistoryClient stub = (ids, location) -> List.of(
+            MarketHistoryFixtures.seriesAt(location, ids.get(0), 1, MarketHistoryFixtures.entry(100, "10")));
         MaterialCostService service = service(stub);
 
         MaterialCost cost = service.cost("T5_2H_LONGBOW", null, "Thetford");
@@ -64,7 +61,7 @@ class MaterialCostServiceTest {
     void missingIngredientPriceYieldsNoTotal() {
         loader.load();
         // Market knows nothing → unitPrice null → total must be null, not 0.
-        MaterialCostService service = service((ids, location) -> List.of());
+        MaterialCostService service = service(MarketHistoryFixtures.stubEmpty());
 
         MaterialCost cost = service.cost("T5_2H_LONGBOW", null, "Lymhurst");
 
@@ -77,7 +74,7 @@ class MaterialCostServiceTest {
     @Test
     void enchantmentVariantsMatchByLevel() {
         loader.load();
-        MaterialCostService service = service((ids, location) -> List.of());
+        MaterialCostService service = service(MarketHistoryFixtures.stubEmpty());
 
         // T5_2H_LONGBOW exists as base (enchantmentLevel null) and .1..4 variants — pick level 2
         assertThat(service.cost("T5_2H_LONGBOW", 2, "Lymhurst").enchantmentLevel()).isEqualTo(2);

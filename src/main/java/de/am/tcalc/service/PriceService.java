@@ -76,7 +76,14 @@ public class PriceService {
         return out;
     }
 
-    /** Convenience single-item view (e.g. for the "Berechnen" panel). */
+    /**
+     * Convenience single-item view (e.g. the "Berechnen" panel). Delegates to the cached
+     * {@link #stats(List, String)} with a one-element list — a dedicated cache entry per item.
+     *
+     * @param itemId exact dump id, e.g. "T4_2H_BOW@1" for an enchanted variant
+     * @param location city name as spelled in the API
+     * @return stats for the item, or {@code null} when the API knows nothing about it
+     */
     public ItemPriceStats stat(String itemId, String location) {
         return stats(List.of(itemId), location).get(itemId);
     }

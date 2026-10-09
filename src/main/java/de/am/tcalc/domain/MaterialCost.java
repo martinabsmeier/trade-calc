@@ -19,13 +19,16 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Purchase price of an item's materials in one city (spec "Berechnen", Variante 1).
+ * Purchase price of an item's materials in one city (spec "Berechnen", Variante 1). Built by
+ * {@link de.am.tcalc.service.calculator.MaterialCostService}; ingredients are priced at quality
+ * "Normal".
  *
  * @param itemId recipe id, e.g. "T5_2H_LONGBOW"
  * @param enchantmentLevel enchantment of the requested variant (null/0 = base)
- * @param location city the materials are bought in
- * @param lines one line per ingredient
- * @param total Σ line costs (scale 2, HALF_UP); {@code null} when any ingredient has no market data
+ * @param location city the materials are bought in (UI label)
+ * @param lines one line per ingredient, in recipe order
+ * @param total Σ line costs (scale 2, HALF_UP); {@code null} when any ingredient has no market
+ *     data — a missing price is never silently treated as zero
  */
 public record MaterialCost(
     String itemId,

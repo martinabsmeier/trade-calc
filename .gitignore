@@ -8,3 +8,6 @@
 
 # macOS metadata
 .DS_Store
+
+# python bytecode
+__pycache__/

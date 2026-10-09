@@ -18,13 +18,14 @@ package de.am.tcalc.domain;
 import java.math.BigDecimal;
 
 /**
- * One line of a {@link MaterialCost}: one ingredient, its unit price in the city, its share.
+ * One line of a {@link MaterialCost}: one ingredient with its recipe amount, unit price in the
+ * city, and the resulting line cost (count × unitPrice, scale 2, HALF_UP). A {@code null} price
+ * or cost means the market has no sales data for the item.
  *
  * @param item ingredient item id, e.g. "T5_PLANKS"
  * @param count units required by the recipe
- * @param unitPrice current unit price (quality "Normal") in the city; {@code null} when the API
- *     has no sales data for this item
- * @param lineCost count × unitPrice (scale 2, HALF_UP); {@code null} when the unit price is unknown
+ * @param unitPrice current unit price (quality "Normal") in the city
+ * @param lineCost count × unitPrice
  */
 public record MaterialCostLine(String item, int count, BigDecimal unitPrice, BigDecimal lineCost) {
 }

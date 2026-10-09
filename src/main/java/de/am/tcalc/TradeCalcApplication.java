@@ -20,6 +20,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cache.annotation.EnableCaching;
 
+/**
+ * Entry point. {@code @EnableCaching} backs the {@code @Cacheable} services
+ * ({@code recipes}, {@code prices}, {@code materialcosts} — names declared in
+ * {@code application.yml}; an undeclared name silently no-ops).
+ */
 @EnableCaching
 @ConfigurationPropertiesScan
 @SpringBootApplication

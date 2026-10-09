@@ -17,12 +17,9 @@ package de.am.tcalc.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import de.am.tcalc.config.PriceProperties;
-import de.am.tcalc.dataprovider.market.MarketHistoryItem;
-import de.am.tcalc.dataprovider.market.MarketPriceHistoryClient;
 import de.am.tcalc.dataprovider.recipe.RecipeLoader;
+import de.am.tcalc.testsupport.MarketHistoryFixtures;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -40,19 +37,8 @@ class ListQueryServiceTest {
     }
 
     private PriceService priceService(int units28d, String quality1Price, String quality2Price) {
-        MarketPriceHistoryClient stub = (ids, location) -> {
-            List<MarketHistoryItem> out = new ArrayList<>();
-            for (String id : ids) {
-                out.add(new MarketHistoryItem(location, id, 1,
-                    List.of(new MarketHistoryItem.MarketHistoryEntry(
-                        units28d, new BigDecimal(quality1Price), "2026-10-09T12:00:00"))));
-                out.add(new MarketHistoryItem(location, id, 2,
-                    List.of(new MarketHistoryItem.MarketHistoryEntry(
-                        units28d, new BigDecimal(quality2Price), "2026-10-09T12:00:00"))));
-            }
-            return out;
-        };
-        return new PriceService(stub, new PriceProperties(null, null, 0, null, 0, 0));
+        de.am.tcalc.config.PriceProperties props = new de.am.tcalc.config.PriceProperties(null, null, 0, null, 0, 0);
+        return new PriceService(MarketHistoryFixtures.stub(units28d, quality1Price, quality2Price), props);
     }
 
     private ListQueryService service(PriceService priceService) {
@@ -110,15 +96,14 @@ class ListQueryServiceTest {
         assertThat(rows.stream().anyMatch(r -> r.name().startsWith("Tasche")))
             .as("no-subcategory items are included under 'Alle'")
             .isTrue();
-        assertThat(rows.stream().allMatch(r -> ListQueryService.CITIES.size() > 0)).isTrue();
     }
 
     @Test
     void rowsWithoutMarketDataSortLastWithZeroAndNullPrice() {
         load();
         // stub returns nothing → every recipe has no stats
-        ListQueryService service = service(new PriceService((ids, location) -> List.of(),
-            new PriceProperties(null, null, 0, null, 0, 0)));
+        ListQueryService service = service(new PriceService(MarketHistoryFixtures.stubEmpty(),
+            new de.am.tcalc.config.PriceProperties(null, null, 0, null, 0, 0)));
 
         List<ListQueryService.ListRow> rows = service.rows("Caerleon", "Bögen", "Alle", 4, 25);
 

@@ -18,6 +18,7 @@ package de.am.tcalc.dataprovider.market;
 import de.am.tcalc.config.PriceProperties;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -40,6 +41,7 @@ public class HttpMarketPriceHistoryClient implements MarketPriceHistoryClient {
     private final RestClient restClient;
     private final PriceProperties properties;
 
+    @Autowired
     public HttpMarketPriceHistoryClient(RestClient.Builder builder, PriceProperties properties) {
         this(buildClient(builder, properties), properties);
     }

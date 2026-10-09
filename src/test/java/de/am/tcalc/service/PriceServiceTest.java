@@ -17,11 +17,13 @@ package de.am.tcalc.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static de.am.tcalc.testsupport.MarketHistoryFixtures.entry;
+import static de.am.tcalc.testsupport.MarketHistoryFixtures.series;
+
 import de.am.tcalc.config.PriceProperties;
 import de.am.tcalc.dataprovider.market.MarketHistoryItem;
 import de.am.tcalc.dataprovider.market.MarketPriceHistoryClient;
 import de.am.tcalc.domain.ItemPriceStats;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -36,8 +38,8 @@ class PriceServiceTest {
         // Spec math: unitsPerDay = Σ item_count ÷ 28 (qualities summed);
         // price = Σ(count×price) ÷ Σcount, volume-weighted, scale 2, HALF_UP.
         MarketPriceHistoryClient stub = (ids, location) -> List.of(
-            series(1, entry(91, "3289"), entry(2, "3000"), entry(0, "5000"), entry(1, null)),
-            series(2, entry(10, "1000"))
+            series("T4_2H_BOW", 1, entry(91, "3289"), entry(2, "3000"), entry(0, "5000"), entry(1, null)),
+            series("T4_2H_BOW", 2, entry(10, "1000"))
         );
         PriceService service = new PriceService(stub, PROPS);
 
@@ -56,7 +58,7 @@ class PriceServiceTest {
 
     @Test
     void statConvenienceReturnsSingleItemOrMissing() {
-        MarketPriceHistoryClient stub = (ids, location) -> List.of(series(1, entry(28, "100")));
+        MarketPriceHistoryClient stub = (ids, location) -> List.of(series("T4_2H_BOW", 1, entry(28, "100")));
         PriceService service = new PriceService(stub, PROPS);
 
         assertThat(service.stat("T4_2H_BOW", "Lymhurst").unitsPerDay())
@@ -67,7 +69,7 @@ class PriceServiceTest {
 
     @Test
     void emptyInputShortcircuitsAndZeroVolumeIsAbsent() {
-        PriceService service = new PriceService((ids, location) -> List.of(series(1, entry(0, "100"))), PROPS);
+        PriceService service = new PriceService((ids, location) -> List.of(series("T4_2H_BOW", 1, entry(0, "100"))), PROPS);
 
         assertThat(service.stats(List.of(), "Lymhurst")).isEmpty();
         assertThat(service.stats(null, "Lymhurst")).isEmpty();
@@ -82,14 +84,5 @@ class PriceServiceTest {
         PriceService service = new PriceService(stub, PROPS);
 
         assertThat(service.stats(List.of("T4_2H_BOW"), "Lymhurst")).isEmpty();
-    }
-
-    private static MarketHistoryItem series(int quality, MarketHistoryItem.MarketHistoryEntry... entries) {
-        return new MarketHistoryItem("Lymhurst", "T4_2H_BOW", quality, List.of(entries));
-    }
-
-    private static MarketHistoryItem.MarketHistoryEntry entry(int count, String price) {
-        return new MarketHistoryItem.MarketHistoryEntry(
-            count, price == null ? null : new BigDecimal(price), "2026-10-09T12:00:00");
     }
 }

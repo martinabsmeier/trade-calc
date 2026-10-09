@@ -30,8 +30,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * Builds the spec's list view: filter recipes by city-independent category/subcategory, sort by
- * average daily units sold (all qualities summed), page 25/50/100.
+ * Builds the spec's list view: filter recipes by category/subcategory (German shop labels,
+ * "Alle" = no filter), sort by average daily units sold (all qualities summed, no-sales last),
+ * page 25/50/100. Market prices come from {@link PriceService} in one batched call per view.
  */
 @Service
 @RequiredArgsConstructor
@@ -147,8 +148,10 @@ public class ListQueryService {
      *
      * @param marketItemId dump id incl. enchantment suffix, e.g. "T4_2H_BOW@1"
      * @param name German display name (tier/enchantment already part of it, e.g. "Langbogen des Adepten")
-     * @param price average price of the requested quality; {@code null} when not traded in it
+     * @param tier tier of the item, 1..8
      * @param enchantmentLevel 0 for base items, 1..4 for enchanted ones
+     * @param unitsPerDay average daily units sold, summed over all qualities (0 when not traded)
+     * @param price average price of the requested quality; {@code null} when not traded in it
      */
     public record ListRow(
         String marketItemId,

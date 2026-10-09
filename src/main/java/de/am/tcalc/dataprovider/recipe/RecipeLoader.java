@@ -29,8 +29,9 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
 /**
- * Reads the static recipe book ({@code classpath:data/recipes.json}) once at startup into a final list.
- * No {@code @Cacheable} on this loader — see {@code RecipeService} for the per-item cache.
+ * Reads the static recipe book ({@code classpath:data/recipes.json}) once at startup
+ * ({@code @PostConstruct}) into a final list. No {@code @Cacheable} on this loader — see
+ * {@code RecipeService} for the per-item cache.
  */
 @Log4j2
 @Component

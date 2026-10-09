@@ -28,8 +28,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 /**
- * Per-item recipe lookup. The {@code recipes} cache declared in {@code application.yml} wraps
- * {@link #findByItemId(String)} only — the loader itself is uncached.
+ * Per-item recipe lookup over a precomputed index (id → variants, built once in the constructor).
+ * The {@code recipes} cache declared in {@code application.yml} wraps {@link #findByItemId(String)}
+ * only — the loader itself is uncached.
  */
 @Service
 public class RecipeService {
@@ -48,6 +49,13 @@ public class RecipeService {
         this.byId = Collections.unmodifiableMap(sorted);
     }
 
+    /**
+     * First variant of the item's recipes. An id resolves to base plus enchantment variants with
+     * the same id — callers wanting a specific enchantment use {@link #variantsOf(String)}.
+     *
+     * @param itemId recipe id, e.g. "T4_2H_LONGBOW"
+     * @return the base recipe (enchantmentLevel is null), or empty when unknown
+     */
     @Cacheable("recipes")
     public Optional<Recipe> findByItemId(String itemId) {
         List<Recipe> list = byId.get(itemId);
