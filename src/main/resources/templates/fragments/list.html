@@ -24,6 +24,7 @@
   </tr>
   </tbody>
 </table>
+<p class="muted" th:if="${!restricted}">Marktdaten (Sortierung nach Verkaufszahlen, Preise) werden geladen, sobald du eine Kategorie oder Unterkategorie auswählst.</p>
 <p class="muted" th:if="${#lists.isEmpty(rows)}">Keine Artikel gefunden.</p>
 </body>
 </html>

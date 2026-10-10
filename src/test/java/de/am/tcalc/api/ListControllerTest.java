@@ -96,6 +96,8 @@ class ListControllerTest {
         assertThat(html).contains("Langbogen des Adepten");
         assertThat(html).contains("5329.00");                              // price of quality 1
         assertThat(html).contains("hx-get=\"/calc?itemId=T4_2H_LONGBOW\""); // base variant, no @suffix
+        // Default filter is "Alle"/"Alle" → unrestricted: hint instead of live market data
+        assertThat(html).contains("sobald du eine Kategorie oder Unterkategorie auswählst");
     }
 
     @Test

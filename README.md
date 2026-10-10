@@ -24,9 +24,12 @@ Implemented so far:
   - `BigDecimal` money math (price scale 2, units scale 1, commercial rounding
     `HALF_UP`);
     `@Cacheable("prices")` on the (item ids, city) pair.
+  - The API throttles aggressively (HTTP 429 "be nice…"), so the list view
+    fetches market data **only once the user restricts the selection** to a
+    concrete category or subcategory; unrestricted ("Alle") pages sort
+    alphabetically without any API call.
 
-Not yet implemented (see spec): REST controllers, the Thymeleaf/HTMX list view and
-its dropdowns, and the profit calculation ("Berechnen", variants 1/2).
+Not yet implemented (see spec): the "Berechnen" Variante 2 (refining-chain math).
 
 ## Build, test, run
 

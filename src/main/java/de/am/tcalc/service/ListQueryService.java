@@ -86,18 +86,35 @@ public class ListQueryService {
     }
 
     /**
-     * One page of the item list, sorted by daily units sold (desc, no-sales last, then by id).
+     * One page of the item list. When the user has restricted the selection (a concrete
+     * category or subcategory), market prices are fetched in one batched call and rows are
+     * sorted by daily units sold. Unrestricted ("Alle"/"Alle") pages fetch NO price data —
+     * they sort alphabetically and carry 0 units / no price.
      *
-     * ponytail: prices are fetched for ALL matching recipes, not just the page — needed because
-     * the sort key IS the sales volume. Upgrade path: API-side aggregation/sort if the list grows.
+     * ponytail: unrestricted pages used to fetch prices for ALL ~7000 recipes in one call and
+     * got throttled (429). Upgrading to an unrestricted units-sorted list needs API-side
+     * aggregation or a background refresher; see trade-calc-spec.md sorting note.
      */
     public List<ListRow> rows(String city, String category, String subcategory, int quality, int size) {
         List<Recipe> recipes = matchingRecipes(category, subcategory);
         if (recipes.isEmpty()) {
             return List.of();
         }
-        Map<String, ItemPriceStats> stats = pricesOf(recipes, city);
-        return sortedPage(recipes.stream().map(r -> row(r, stats.get(marketId(r)), quality)).toList(), size);
+        boolean restricted = isRestricted(category, subcategory);
+        Map<String, ItemPriceStats> stats = restricted ? pricesOf(recipes, city) : Map.of();
+        List<ListRow> rows = recipes.stream().map(r -> row(r, stats.get(marketId(r)), quality)).toList();
+        Comparator<ListRow> sort = restricted
+            ? Comparator.comparing(ListRow::unitsPerDay, Comparator.reverseOrder())
+                .thenComparing(ListRow::marketItemId)
+            : Comparator.comparing(ListRow::name).thenComparing(ListRow::marketItemId);
+        return page(rows, size, sort);
+    }
+
+    /** True when at least one of the two filters is a concrete (non-"Alle") selection. */
+    public static boolean isRestricted(String category, String subcategory) {
+        boolean filterCategory = category != null && !ALL.equals(category);
+        boolean filterSub = subcategory != null && !ALL.equals(subcategory);
+        return filterCategory || filterSub;
     }
 
     /** Recipes matching the category/subcategory filter ("Alle" = no filter); keeps order. */
@@ -125,11 +142,10 @@ public class ListQueryService {
         return new ListRow(marketId(recipe), recipe.name(), recipe.tier(), enchant, units, price);
     }
 
-    /** Sorts by daily units (desc, no-sales last, then id) and returns the first {@code size} rows. */
-    private static List<ListRow> sortedPage(List<ListRow> rows, int size) {
+    /** Sorts rows and returns the first {@code size} of them. */
+    private static List<ListRow> page(List<ListRow> rows, int size, Comparator<ListRow> sort) {
         List<ListRow> sorted = new ArrayList<>(rows);
-        sorted.sort(Comparator.comparing(ListRow::unitsPerDay, Comparator.reverseOrder())
-            .thenComparing(ListRow::marketItemId));
+        sorted.sort(sort);
         int to = Math.min(size, sorted.size());
         return sorted.subList(0, to).stream()
             .map(row -> new ListRow(row.marketItemId(), row.name(), row.tier(), row.enchantmentLevel(),

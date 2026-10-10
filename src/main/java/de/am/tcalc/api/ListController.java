@@ -72,6 +72,7 @@ public class ListController {
         Model model) {
         model.addAttribute("rows",
             listQueryService.rows(city, category, subcategory, quality, size));
+        model.addAttribute("restricted", ListQueryService.isRestricted(category, subcategory));
         return "fragments/list";
     }
 

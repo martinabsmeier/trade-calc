@@ -89,17 +89,28 @@ class ListQueryServiceTest {
         assertThat(rows).anySatisfy(r -> assertThat(r.enchantmentLevel()).isPositive());
     }
 
+    /** Unrestricted pages fetch NO market data (429 throttle) and sort alphabetically. */
     @Test
-    void rowsAllCategoryIncludesItemsWithoutSubcategoryAndCapsAtSize() {
+    void rowsAllCategoryFetchesNoPricesSortsAlphabeticallyAndCapsAtSize() {
         load();
+        // fixture would deliver 20.0 units/day — any nonzero value means a price fetch happened
         ListQueryService service = service(priceService(280, "100", "999"));
 
         List<ListQueryService.ListRow> rows = service.rows("Brecilien", ListQueryService.ALL, ListQueryService.ALL, 2, 100);
 
         assertThat(rows).hasSize(100);
-        assertThat(rows.stream().anyMatch(r -> r.name().startsWith("Tasche")))
-            .as("no-subcategory items are included under 'Alle'")
-            .isTrue();
+        assertThat(rows).allSatisfy(r -> {
+            assertThat(r.unitsPerDay()).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(r.price()).isNull();
+        });
+        for (int i = 1; i < rows.size(); i++) {
+            assertThat(rows.get(i - 1).name())
+                .isLessThanOrEqualTo(rows.get(i).name());
+        }
+        assertThat(ListQueryService.isRestricted(null, null)).isFalse();
+        assertThat(ListQueryService.isRestricted(ListQueryService.ALL, ListQueryService.ALL)).isFalse();
+        assertThat(ListQueryService.isRestricted("Bögen", ListQueryService.ALL)).isTrue();
+        assertThat(ListQueryService.isRestricted(ListQueryService.ALL, "Langbögen")).isTrue();
     }
 
     @Test
