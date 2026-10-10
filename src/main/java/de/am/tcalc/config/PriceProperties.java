@@ -19,13 +19,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Settings for the albion-online-data.com market history fetch (spec: data source, Europa server).
+ * All defaults live in {@code application.yml} — the record carries no built-in fallbacks, so a
+ * missing key surfaces at startup/testing instead of being silently substituted in code.
  *
- * @param baseUrl API host; defaults to the Europa server when unset or blank
- * @param historyPath path of the history endpoint; defaults to {@code /api/v2/stats/history}
- * @param historyDays history window in days (the spec's "last 4 weeks"); defaults to 28
- * @param qualities quality levels queried in one request; defaults to {@code "1,2,3,4"}
- * @param connectTimeoutMs connect timeout; defaults to 2000 ms
- * @param readTimeoutMs read timeout; defaults to 5000 ms
+ * @param baseUrl API host, e.g. the Europa server
+ * @param historyPath path of the history endpoint
+ * @param historyDays history window in days (the spec's "last 4 weeks")
+ * @param qualities quality levels queried in one request
+ * @param connectTimeoutMs connect timeout
+ * @param readTimeoutMs read timeout
  */
 @ConfigurationProperties(prefix = "price")
 public record PriceProperties(
@@ -36,19 +38,4 @@ public record PriceProperties(
     int connectTimeoutMs,
     int readTimeoutMs
 ) {
-
-    public PriceProperties {
-        baseUrl = baseUrl == null || baseUrl.isBlank() ? "https://europe.albion-online-data.com" : baseUrl;
-        historyPath = historyPath == null || historyPath.isBlank() ? "/api/v2/stats/history" : historyPath;
-        qualities = qualities == null || qualities.isBlank() ? "1,2,3,4" : qualities;
-        if (historyDays <= 0) {
-            historyDays = 28;
-        }
-        if (connectTimeoutMs <= 0) {
-            connectTimeoutMs = 2000;
-        }
-        if (readTimeoutMs <= 0) {
-            readTimeoutMs = 5000;
-        }
-    }
 }

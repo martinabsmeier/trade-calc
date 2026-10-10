@@ -31,6 +31,10 @@ import org.springframework.web.client.RestClient;
 
 class HttpMarketPriceHistoryClientTest {
 
+    // application.yml values (no code-side fallbacks since Boot 4); baseUrl only used via builder.
+    private static final PriceProperties TEST_PROPS = new PriceProperties(
+        "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000);
+
     // NOTE: never hits the real API — the request below is matched against a stubbed mock server.
     private static final String STUB_BODY = """
         [
@@ -52,7 +56,7 @@ class HttpMarketPriceHistoryClientTest {
             .andRespond(withSuccess(STUB_BODY, MediaType.APPLICATION_JSON));
 
         HttpMarketPriceHistoryClient client = new HttpMarketPriceHistoryClient(
-            builder.build(), new PriceProperties(null, null, 0, null, 0, 0));
+            builder.build(), TEST_PROPS);
 
         List<MarketHistoryItem> result =
             client.history(List.of("T4_2H_BOW", "T4_2H_BOW@1"), "Lymhurst");
@@ -73,7 +77,7 @@ class HttpMarketPriceHistoryClientTest {
         server.expect(requestTo("/api/v2/stats/history/T4_2H_BOW?locations=Lymhurst&qualities=1,2,3,4&time-range=28"))
             .andRespond(withNoContent());
         HttpMarketPriceHistoryClient client = new HttpMarketPriceHistoryClient(
-            builder.build(), new PriceProperties(null, null, 0, null, 0, 0));
+            builder.build(), TEST_PROPS);
 
         assertThat(client.history(List.of("T4_2H_BOW"), "Lymhurst")).isEmpty();
         server.verify();
@@ -84,7 +88,7 @@ class HttpMarketPriceHistoryClientTest {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         HttpMarketPriceHistoryClient client = new HttpMarketPriceHistoryClient(
-            builder.build(), new PriceProperties(null, null, 0, null, 0, 0));
+            builder.build(), TEST_PROPS);
 
         assertThat(client.history(List.of(), "Lymhurst")).isEmpty();
         assertThat(client.history(null, "Lymhurst")).isEmpty();

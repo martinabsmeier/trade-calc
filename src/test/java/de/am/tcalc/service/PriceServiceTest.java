@@ -30,8 +30,9 @@ import org.junit.jupiter.api.Test;
 
 class PriceServiceTest {
 
+    // Same values as application.yml — the record has no code-side fallbacks.
     private static final PriceProperties PROPS = new PriceProperties(
-        null, null, 28, null, 0, 0);
+        "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000);
 
     @Test
     void computesUnitsPerDaySummedOverQualitiesAndWeightedPrice() {

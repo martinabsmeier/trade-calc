@@ -28,6 +28,11 @@ import org.junit.jupiter.api.Test;
  */
 class ListQueryServiceTest {
 
+    // application.yml values; the record has no code-side fallbacks.
+    private static final de.am.tcalc.config.PriceProperties PROPS =
+        new de.am.tcalc.config.PriceProperties(
+            "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000);
+
     private final RecipeLoader loader = new RecipeLoader(
         new org.springframework.core.io.DefaultResourceLoader(),
         new tools.jackson.databind.json.JsonMapper());
@@ -37,8 +42,7 @@ class ListQueryServiceTest {
     }
 
     private PriceService priceService(int units28d, String quality1Price, String quality2Price) {
-        de.am.tcalc.config.PriceProperties props = new de.am.tcalc.config.PriceProperties(null, null, 0, null, 0, 0);
-        return new PriceService(MarketHistoryFixtures.stub(units28d, quality1Price, quality2Price), props);
+        return new PriceService(MarketHistoryFixtures.stub(units28d, quality1Price, quality2Price), PROPS);
     }
 
     private ListQueryService service(PriceService priceService) {
@@ -103,7 +107,7 @@ class ListQueryServiceTest {
         load();
         // stub returns nothing → every recipe has no stats
         ListQueryService service = service(new PriceService(MarketHistoryFixtures.stubEmpty(),
-            new de.am.tcalc.config.PriceProperties(null, null, 0, null, 0, 0)));
+            PROPS));
 
         List<ListQueryService.ListRow> rows = service.rows("Caerleon", "Bögen", "Alle", 4, 25);
 

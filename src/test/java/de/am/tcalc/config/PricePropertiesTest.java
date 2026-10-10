@@ -17,13 +17,34 @@ package de.am.tcalc.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
+/**
+ * The defaults live in {@code application.yml} — the record carries no fallbacks. This test binds
+ * the same values the yml ships and guards them against silent drift.
+ */
 class PricePropertiesTest {
 
+    private PriceProperties bind(Map<String, String> values) {
+        return new Binder(new MapConfigurationPropertySource(values))
+            .bind("price", Bindable.of(PriceProperties.class)).get();
+    }
+
+    private static final Map<String, String> YML_DEFAULTS = Map.of(
+        "price.base-url", "https://europe.albion-online-data.com",
+        "price.history-path", "/api/v2/stats/history",
+        "price.history-days", "28",
+        "price.qualities", "1,2,3,4",
+        "price.connect-timeout-ms", "2000",
+        "price.read-timeout-ms", "5000");
+
     @Test
-    void emptyFieldsFallBackToSpecDefaults() {
-        PriceProperties p = new PriceProperties(null, " ", 0, "", -5, -5);
+    void applicationYmlValuesBindAsExpected() {
+        PriceProperties p = bind(YML_DEFAULTS);
 
         assertThat(p.baseUrl()).isEqualTo("https://europe.albion-online-data.com");
         assertThat(p.historyPath()).isEqualTo("/api/v2/stats/history");
@@ -34,14 +55,13 @@ class PricePropertiesTest {
     }
 
     @Test
-    void explicitValuesAreKept() {
-        PriceProperties p = new PriceProperties(
-            "https://west.albion-online-data.com", "/api/v2/stats/history", 7, "1", 100, 200);
+    void valuesAreOverridableWithoutClassSideFallbacks() {
+        // A key set in an environment wins; a MISSING key stays absent — the record
+        // does not silently substitute values in code.
+        PriceProperties p = bind(Map.of("price.history-days", "7"));
 
-        assertThat(p.baseUrl()).isEqualTo("https://west.albion-online-data.com");
         assertThat(p.historyDays()).isEqualTo(7);
-        assertThat(p.qualities()).isEqualTo("1");
-        assertThat(p.connectTimeoutMs()).isEqualTo(100);
-        assertThat(p.readTimeoutMs()).isEqualTo(200);
+        assertThat(p.baseUrl()).isNull();
+        assertThat(p.historyPath()).isNull();
     }
 }

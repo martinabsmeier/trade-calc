@@ -36,6 +36,10 @@ import org.junit.jupiter.api.Test;
  */
 class MaterialCostServiceTest {
 
+    // application.yml values; the record has no code-side fallbacks.
+    private static final PriceProperties TEST_PROPS = new PriceProperties(
+        "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000);
+
     private final RecipeLoader loader = new RecipeLoader(
         new org.springframework.core.io.DefaultResourceLoader(),
         new tools.jackson.databind.json.JsonMapper());
@@ -84,6 +88,6 @@ class MaterialCostServiceTest {
 
     private MaterialCostService service(MarketPriceHistoryClient client) {
         return new MaterialCostService(new RecipeService(loader), new PriceService(client,
-            new PriceProperties(null, null, 0, null, 0, 0)));
+            TEST_PROPS));
     }
 }
