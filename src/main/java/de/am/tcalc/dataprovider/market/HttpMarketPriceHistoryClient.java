@@ -16,10 +16,20 @@
 package de.am.tcalc.dataprovider.market;
 
 import de.am.tcalc.config.PriceProperties;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.zip.GZIPInputStream;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -58,7 +68,66 @@ public class HttpMarketPriceHistoryClient implements MarketPriceHistoryClient {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(properties.connectTimeoutMs());
         factory.setReadTimeout(properties.readTimeoutMs());
-        return builder.baseUrl(properties.baseUrl()).requestFactory(factory).build();
+        // The throttled AODP API demands compression ("be nice … use compression"). The JDK
+        // HttpURLConnection behind SimpleClientHttpRequestFactory neither negotiates gzip nor
+        // decodes it, so the interceptor below must do the decoding.
+        return builder.baseUrl(properties.baseUrl()).requestFactory(factory)
+            .defaultHeader(HttpHeaders.ACCEPT_ENCODING, "gzip")
+            .requestInterceptor(new GzipDecoder())
+            .build();
+    }
+
+    /** Unpacks gzip responses; identity pass-through for anything the server sends uncompressed. */
+    @Log4j2
+    static class GzipDecoder implements ClientHttpRequestInterceptor {
+
+        @Override
+        public ClientHttpResponse intercept(HttpRequest request, byte[] body,
+                ClientHttpRequestExecution execution) throws IOException {
+            ClientHttpResponse response = execution.execute(request, body);
+            if (!"gzip".equalsIgnoreCase(response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING))) {
+                return response;
+            }
+            log.debug("Unpacking gzipped response from {}", request.getURI());
+            byte[] gzipped = response.getBody().readAllBytes();
+            response.close();
+            return new UnpackedResponse(response, new GZIPInputStream(new ByteArrayInputStream(gzipped)));
+        }
+    }
+
+    /** Wraps the server response so only {@link #getBody} differs — gzip already unpacked. */
+    private record UnpackedResponse(ClientHttpResponse delegate, InputStream body)
+            implements ClientHttpResponse {
+
+        @Override
+        public HttpStatusCode getStatusCode() throws IOException {
+            return delegate.getStatusCode();
+        }
+
+        @Override
+        public String getStatusText() throws IOException {
+            return delegate.getStatusText();
+        }
+
+        @Override
+        public HttpHeaders getHeaders() {
+            return delegate.getHeaders();
+        }
+
+        @Override
+        public InputStream getBody() {
+            return body;
+        }
+
+        @Override
+        public void close() {
+            try (InputStream in = body) {
+                // Closing the unpacking stream releases the gzip buffers.
+            } catch (IOException e) {
+                log.debug("Ignoring error while closing gzipped response", e);
+            }
+            delegate.close();
+        }
     }
 
     @Override

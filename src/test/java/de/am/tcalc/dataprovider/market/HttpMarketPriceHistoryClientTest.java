@@ -22,7 +22,14 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import de.am.tcalc.config.PriceProperties;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -68,6 +75,52 @@ class HttpMarketPriceHistoryClientTest {
         assertThat(result.get(0).data().get(0).itemCount()).isEqualTo(5);
         assertThat(result.get(0).data().get(0).avgPrice().intValue()).isEqualTo(4331);
         server.verify();
+    }
+
+    /**
+     * End-to-end against a localhost stub (never the real API): MockRestServiceServer swaps the
+     * request factory out, so header negotiation and gzip decoding are only observable here.
+     */
+    @Test
+    void realClientNegotiatesGzipAndDecodes() throws IOException {
+        AtomicReference<String> acceptEncoding = new AtomicReference<>();
+        com.sun.net.httpserver.HttpServer server =
+            com.sun.net.httpserver.HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/api/v2/stats/history/T4_2H_BOW", exchange -> {
+            acceptEncoding.set(exchange.getRequestHeaders().getFirst("Accept-Encoding"));
+            byte[] payload = gzip(STUB_BODY);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.getResponseHeaders().set("Content-Encoding", "gzip");
+            exchange.sendResponseHeaders(200, payload.length);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(payload);
+            }
+        });
+        server.start();
+
+        try {
+            int port = server.getAddress().getPort();
+            PriceProperties props = new PriceProperties(
+                "http://127.0.0.1:" + port, "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000);
+            HttpMarketPriceHistoryClient client = new HttpMarketPriceHistoryClient(props);
+
+            List<MarketHistoryItem> result = client.history(List.of("T4_2H_BOW"), "Lymhurst");
+
+            assertThat(acceptEncoding.get()).isEqualTo("gzip");
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).itemId()).isEqualTo("T4_2H_BOW");
+            assertThat(result.get(0).quality()).isEqualTo(1);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    private static byte[] gzip(String body) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(out)) {
+            gzip.write(body.getBytes(StandardCharsets.UTF_8));
+        }
+        return out.toByteArray();
     }
 
     @Test
