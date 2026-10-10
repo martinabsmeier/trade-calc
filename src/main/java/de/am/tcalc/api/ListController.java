@@ -20,7 +20,6 @@ import de.am.tcalc.domain.MaterialCost;
 import de.am.tcalc.service.ListQueryService;
 import de.am.tcalc.service.PriceService;
 import de.am.tcalc.service.calculator.MaterialCostService;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

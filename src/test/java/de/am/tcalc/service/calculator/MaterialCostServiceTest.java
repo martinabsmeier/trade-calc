@@ -19,14 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 
 import de.am.tcalc.config.PriceProperties;
-import de.am.tcalc.dataprovider.market.MarketHistoryItem;
 import de.am.tcalc.dataprovider.market.MarketPriceHistoryClient;
 import de.am.tcalc.dataprovider.recipe.RecipeLoader;
 import de.am.tcalc.domain.MaterialCost;
 import de.am.tcalc.service.PriceService;
 import de.am.tcalc.service.RecipeService;
 import de.am.tcalc.testsupport.MarketHistoryFixtures;
-import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
