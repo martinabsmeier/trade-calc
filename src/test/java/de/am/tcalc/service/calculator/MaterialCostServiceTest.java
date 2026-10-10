@@ -36,7 +36,7 @@ class MaterialCostServiceTest {
 
     // application.yml values; the record has no code-side fallbacks.
     private static final PriceProperties TEST_PROPS = new PriceProperties(
-        "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000);
+        "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000, 1, 2500);
 
     private final RecipeLoader loader = new RecipeLoader(
         new org.springframework.core.io.DefaultResourceLoader(),

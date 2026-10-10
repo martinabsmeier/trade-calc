@@ -32,7 +32,7 @@ class PriceServiceTest {
 
     // Same values as application.yml — the record has no code-side fallbacks.
     private static final PriceProperties PROPS = new PriceProperties(
-        "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000);
+        "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000, 1, 2500);
 
     @Test
     void computesUnitsPerDaySummedOverQualitiesAndWeightedPrice() {

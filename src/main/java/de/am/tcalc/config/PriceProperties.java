@@ -28,6 +28,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param qualities quality levels queried in one request
  * @param connectTimeoutMs connect timeout
  * @param readTimeoutMs read timeout
+ * @param maxRetries extra attempts on 429 or connection failure before giving up
+ * @param retryMaxWaitMs upper bound (ms) for the wait between retries, e.g. a clamped Retry-After
  */
 @ConfigurationProperties(prefix = "price")
 public record PriceProperties(
@@ -36,6 +38,8 @@ public record PriceProperties(
     int historyDays,
     String qualities,
     int connectTimeoutMs,
-    int readTimeoutMs
+    int readTimeoutMs,
+    int maxRetries,
+    int retryMaxWaitMs
 ) {
 }

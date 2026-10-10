@@ -19,6 +19,10 @@ import de.am.tcalc.config.PriceProperties;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 import lombok.extern.log4j.Log4j2;
@@ -33,6 +37,8 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -45,6 +51,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Log4j2
 @Component
 public class HttpMarketPriceHistoryClient implements MarketPriceHistoryClient {
+
+    /** Wait between retries when the server sends no (parseable) Retry-After. */
+    static final long DEFAULT_RETRY_WAIT_MS = 500;
 
     private static final ParameterizedTypeReference<List<MarketHistoryItem>> TYPE =
         new ParameterizedTypeReference<>() {};
@@ -143,7 +152,73 @@ public class HttpMarketPriceHistoryClient implements MarketPriceHistoryClient {
             .queryParam("time-range", properties.historyDays())
             .build()
             .toUriString();
+
+        // The AODP API throttles bursts (429 with a Retry-After) and sometimes drops the
+        // connection mid-request ("Error writing to server") — both are transient, so both
+        // get the same bounded retry budget (Spring's @Cacheable never caches the throwing
+        // attempt — if all retries fail, the exception surfaces to the caller).
+        for (int attempt = 0; attempt <= properties.maxRetries(); attempt++) {
+            try {
+                return fetch(uri);
+            } catch (HttpClientErrorException.TooManyRequests e) {
+                if (attempt == properties.maxRetries()) {
+                    log.warn("Market history throttled after {} attempt(s): {}",
+                        attempt + 1, e.getResponseBodyAsString());
+                    throw e;
+                }
+                log.info("Market history throttled, retrying");
+                waitForRetry(whenToRetry(e.getResponseHeaders()));
+            } catch (ResourceAccessException e) {
+                if (attempt == properties.maxRetries()) {
+                    log.warn("Market history request failed after {} attempt(s)", attempt + 1, e);
+                    throw e;
+                }
+                log.info("Market history connection failed, retrying", e);
+                waitForRetry(DEFAULT_RETRY_WAIT_MS);
+            }
+        }
+        throw new IllegalStateException("unreachable");
+    }
+
+    private List<MarketHistoryItem> fetch(String uri) {
         List<MarketHistoryItem> result = restClient.get().uri(uri).retrieve().body(TYPE);
         return result == null ? List.of() : List.copyOf(result);
+    }
+
+    /** Wait time derived from the server's Retry-After (seconds or HTTP-date), clamped. */
+    long whenToRetry(HttpHeaders headersFromResponse) {
+        if (headersFromResponse == null) {
+            return DEFAULT_RETRY_WAIT_MS;
+        }
+        String raw = headersFromResponse.getFirst(HttpHeaders.RETRY_AFTER);
+        if (!StringUtils.hasText(raw)) {
+            return DEFAULT_RETRY_WAIT_MS;
+        }
+        try {
+            return clamp(Long.parseLong(raw.trim()) * 1000L);
+        } catch (NumberFormatException seconds) {
+            try {
+                return clamp(Duration.ofMillis(
+                    ZonedDateTime.parse(raw, DateTimeFormatter.RFC_1123_DATE_TIME)
+                        .toInstant().minusMillis(System.currentTimeMillis()).toEpochMilli())
+                    .toMillis());
+            } catch (DateTimeParseException date) {
+                log.info("Unparseable Retry-After header: {}", raw);
+                return DEFAULT_RETRY_WAIT_MS;
+            }
+        }
+    }
+
+    private long clamp(long waitMs) {
+        return Math.max(0, Math.min(waitMs, properties.retryMaxWaitMs()));
+    }
+
+    private void waitForRetry(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting to retry", e);
+        }
     }
 }

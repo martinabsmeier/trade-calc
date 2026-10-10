@@ -81,6 +81,8 @@ All external settings flow through `config/PriceProperties`
 | `price.history-days` | `28` | averaging window (spec: last 4 weeks) |
 | `price.qualities` | `1,2,3,4` | quality levels fetched in one request |
 | `price.connect-timeout-ms` / `price.read-timeout-ms` | 2000 / 5000 | HTTP timeouts |
+| `price.max-retries` | `1` | extra attempts on 429 or connection failure |
+| `price.retry-max-wait-ms` | `2500` | upper bound for the wait between retries (a server `Retry-After` is clamped to this) |
 
 Cache names are declared in `application.yml` (`recipes`, `prices`) — a new
 `@Cacheable` name must be added there or it silently no-ops.

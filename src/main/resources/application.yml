@@ -15,6 +15,8 @@ price:
   qualities: "1,2,3,4"
   connect-timeout-ms: 2000
   read-timeout-ms: 5000
+  max-retries: 1
+  retry-max-wait-ms: 2500
 
 logging:
   level:

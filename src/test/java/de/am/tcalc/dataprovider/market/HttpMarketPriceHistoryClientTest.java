@@ -28,19 +28,22 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 class HttpMarketPriceHistoryClientTest {
 
     // application.yml values (no code-side fallbacks since Boot 4); baseUrl only used via builder.
     private static final PriceProperties TEST_PROPS = new PriceProperties(
-        "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000);
+        "https://test.local", "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000, 1, 2500);
 
     // NOTE: never hits the real API — the request below is matched against a stubbed mock server.
     private static final String STUB_BODY = """
@@ -101,7 +104,7 @@ class HttpMarketPriceHistoryClientTest {
         try {
             int port = server.getAddress().getPort();
             PriceProperties props = new PriceProperties(
-                "http://127.0.0.1:" + port, "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000);
+                "http://127.0.0.1:" + port, "/api/v2/stats/history", 28, "1,2,3,4", 1000, 2000, 1, 2500);
             HttpMarketPriceHistoryClient client = new HttpMarketPriceHistoryClient(props);
 
             List<MarketHistoryItem> result = client.history(List.of("T4_2H_BOW"), "Lymhurst");
@@ -121,6 +124,118 @@ class HttpMarketPriceHistoryClientTest {
             gzip.write(body.getBytes(StandardCharsets.UTF_8));
         }
         return out.toByteArray();
+    }
+
+    @FunctionalInterface
+    private interface ExchangeHandler {
+        void handle(com.sun.net.httpserver.HttpExchange exchange) throws IOException;
+    }
+
+    private static com.sun.net.httpserver.HttpServer stubServer(
+            AtomicInteger requests, ExchangeHandler handler)
+            throws IOException {
+        com.sun.net.httpserver.HttpServer server =
+            com.sun.net.httpserver.HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/api/v2/stats/history/T4_2H_BOW", exchange -> {
+            int n = requests.incrementAndGet();
+            if (n == 1) {
+                handler.handle(exchange);
+                exchange.close();
+                return;
+            }
+            byte[] body = STUB_BODY.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(body);
+            }
+        });
+        server.start();
+        return server;
+    }
+
+    private static PriceProperties retryProps(int port, int maxRetries, int retryMaxWaitMs) {
+        return new PriceProperties("http://127.0.0.1:" + port, "/api/v2/stats/history",
+            28, "1,2,3,4", 1000, 20000, maxRetries, retryMaxWaitMs);
+    }
+
+    /** 429 + Retry-After on the first call → one retry after the (clamped) wait succeeds. */
+    @Test
+    void throttledRequestIsRetriedAndSucceeds() throws IOException {
+        AtomicInteger requests = new AtomicInteger();
+        com.sun.net.httpserver.HttpServer server = stubServer(requests, exchange -> {
+            // Retry-After far above the clamp — waits only retryMaxWaitMs (20 ms here)
+            exchange.getResponseHeaders().set("Retry-After", "30");
+            exchange.sendResponseHeaders(429, -1);
+        });
+        try {
+            HttpMarketPriceHistoryClient client = new HttpMarketPriceHistoryClient(
+                retryProps(server.getAddress().getPort(), 1, 20));
+
+            List<MarketHistoryItem> result = client.history(List.of("T4_2H_BOW"), "Lymhurst");
+
+            assertThat(result).isNotEmpty();
+            assertThat(requests.get()).isEqualTo(2);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** The retry budget is finite: retryMaxWaitMs of 0 → no retry, the 429 surfaces. */
+    @Test
+    void throttleSurfacesWhenRetryBudgetIsExhausted() throws IOException {
+        AtomicInteger requests = new AtomicInteger();
+        com.sun.net.httpserver.HttpServer server = stubServer(requests, exchange ->
+            exchange.sendResponseHeaders(429, -1));
+        try {
+            HttpMarketPriceHistoryClient client = new HttpMarketPriceHistoryClient(
+                retryProps(server.getAddress().getPort(), 0, 0));
+
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                    () -> client.history(List.of("T4_2H_BOW"), "Lymhurst"))
+                .isInstanceOf(HttpClientErrorException.TooManyRequests.class);
+            assertThat(requests.get()).isEqualTo(1);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** "Error writing to server" (connection dropped mid-request) is transient → retried. */
+    @Test
+    void droppedConnectionIsRetriedAndSucceeds() throws IOException {
+        AtomicInteger requests = new AtomicInteger();
+        com.sun.net.httpserver.HttpServer server = stubServer(requests, exchange -> {
+            throw new RuntimeException("simulate mid-request connection drop");
+        });
+        try {
+            HttpMarketPriceHistoryClient client = new HttpMarketPriceHistoryClient(
+                retryProps(server.getAddress().getPort(), 1, 20));
+
+            List<MarketHistoryItem> result = client.history(List.of("T4_2H_BOW"), "Lymhurst");
+
+            assertThat(result).isNotEmpty();
+            assertThat(requests.get()).isEqualTo(2);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** Retry-After parsing: seconds clamped, garbage → default wait. */
+    @Test
+    void retryAfterIsClampedOrFallsBackToDefault() {
+        HttpMarketPriceHistoryClient client = new HttpMarketPriceHistoryClient(null, TEST_PROPS);
+        HttpHeaders h = new HttpHeaders();
+
+        assertThat(client.whenToRetry(null)).isEqualTo(HttpMarketPriceHistoryClient.DEFAULT_RETRY_WAIT_MS);
+        h.set("Retry-After", "30");
+        assertThat(client.whenToRetry(h)).isEqualTo(2500L);   // clamped to retry-max-wait-ms
+        h.set("Retry-After", "-5");
+        assertThat(client.whenToRetry(h)).isEqualTo(0L);
+        h.set("Retry-After", "garbage");
+        assertThat(client.whenToRetry(h)).isEqualTo(HttpMarketPriceHistoryClient.DEFAULT_RETRY_WAIT_MS);
+        h.set("Retry-After", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME.format(
+            java.time.ZonedDateTime.now().plusSeconds(30)));
+        assertThat(client.whenToRetry(h)).isEqualTo(2500L);   // HTTP-date also clamped
     }
 
     @Test
