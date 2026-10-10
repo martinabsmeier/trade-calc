@@ -92,41 +92,46 @@ public class ListQueryService {
      * the sort key IS the sales volume. Upgrade path: API-side aggregation/sort if the list grows.
      */
     public List<ListRow> rows(String city, String category, String subcategory, int quality, int size) {
-        List<Recipe> recipes = new ArrayList<>();
-        boolean filterCategory = category != null && !ALL.equals(category);
-        boolean filterSub = subcategory != null && !ALL.equals(subcategory);
-        for (Recipe r : recipeService.all()) {
-            if (filterCategory && !category.equals(r.shopSub1())) {
-                continue;
-            }
-            if (filterSub && !subcategory.equals(r.shopSub2())) {
-                continue;
-            }
-            recipes.add(r);
-        }
+        List<Recipe> recipes = matchingRecipes(category, subcategory);
         if (recipes.isEmpty()) {
             return List.of();
         }
+        Map<String, ItemPriceStats> stats = pricesOf(recipes, city);
+        return sortedPage(recipes.stream().map(r -> row(r, stats.get(marketId(r)), quality)).toList(), size);
+    }
 
-        Set<String> marketIds = new LinkedHashSet<>();
-        for (Recipe r : recipes) {
-            marketIds.add(marketId(r));
-        }
-        String apiLocation = apiLocation(city);
-        Map<String, ItemPriceStats> stats = priceService.stats(List.copyOf(marketIds), apiLocation);
+    /** Recipes matching the category/subcategory filter ("Alle" = no filter); keeps order. */
+    private List<Recipe> matchingRecipes(String category, String subcategory) {
+        boolean filterCategory = category != null && !ALL.equals(category);
+        boolean filterSub = subcategory != null && !ALL.equals(subcategory);
+        return recipeService.all().stream()
+            .filter(r -> !(filterCategory && !category.equals(r.shopSub1())))
+            .filter(r -> !(filterSub && !subcategory.equals(r.shopSub2())))
+            .toList();
+    }
 
-        List<ListRow> rows = new ArrayList<>();
-        for (Recipe r : recipes) {
-            ItemPriceStats s = stats.get(marketId(r));
-            BigDecimal units = s == null ? BigDecimal.ZERO : s.unitsPerDay();
-            BigDecimal price = s == null ? null : s.priceByQuality().get(quality);
-            rows.add(new ListRow(marketId(r), r.name(), r.tier(),
-                r.enchantmentLevel() == null ? 0 : r.enchantmentLevel(), units, price));
-        }
-        rows.sort(Comparator.comparing(ListRow::unitsPerDay, Comparator.reverseOrder())
+    /** Batched market stats for all recipes' market ids in the city (empty map when untraded). */
+    private Map<String, ItemPriceStats> pricesOf(List<Recipe> recipes, String city) {
+        Set<String> marketIds = recipes.stream().map(ListQueryService::marketId)
+            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        return priceService.stats(List.copyOf(marketIds), apiLocation(city));
+    }
+
+    /** One table row; items without market data get 0 units and no price. */
+    private static ListRow row(Recipe recipe, ItemPriceStats stats, int quality) {
+        BigDecimal units = stats == null ? BigDecimal.ZERO : stats.unitsPerDay();
+        BigDecimal price = stats == null ? null : stats.priceByQuality().get(quality);
+        int enchant = recipe.enchantmentLevel() == null ? 0 : recipe.enchantmentLevel();
+        return new ListRow(marketId(recipe), recipe.name(), recipe.tier(), enchant, units, price);
+    }
+
+    /** Sorts by daily units (desc, no-sales last, then id) and returns the first {@code size} rows. */
+    private static List<ListRow> sortedPage(List<ListRow> rows, int size) {
+        List<ListRow> sorted = new ArrayList<>(rows);
+        sorted.sort(Comparator.comparing(ListRow::unitsPerDay, Comparator.reverseOrder())
             .thenComparing(ListRow::marketItemId));
-        int to = Math.min(size, rows.size());
-        return rows.subList(0, to).stream()
+        int to = Math.min(size, sorted.size());
+        return sorted.subList(0, to).stream()
             .map(row -> new ListRow(row.marketItemId(), row.name(), row.tier(), row.enchantmentLevel(),
                 // Commercial rounding (HALF_UP), re-applied defensively to the service output.
                 row.unitsPerDay().setScale(1, RoundingMode.HALF_UP), row.price()))

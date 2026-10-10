@@ -23,7 +23,6 @@ import de.am.tcalc.service.PriceService;
 import de.am.tcalc.service.RecipeService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -55,27 +54,39 @@ public class MaterialCostService {
         Optional<Recipe> recipe = recipeService.variantsOf(itemId).stream()
             .filter(r -> matchEnchantment(r, enchantmentLevel))
             .findFirst();
-        if (recipe.isEmpty()) {
-            return null;
-        }
-        List<MaterialCostLine> lines = new ArrayList<>();
+        return recipe.map(r -> costOf(r, itemId, enchantmentLevel, location)).orElse(null);
+    }
+
+    /** Line costs per ingredient; the total is null as soon as one price is unknown. */
+    private MaterialCost costOf(Recipe recipe, String itemId, Integer enchantmentLevel, String location) {
+        List<MaterialCostLine> lines = recipe.ingredients().stream()
+            .map(ingredient -> line(ingredient, location))
+            .toList();
+        return new MaterialCost(itemId, enchantmentLevel, location, lines, total(lines));
+    }
+
+    /** One ingredient line, priced at quality "Normal" in the city. */
+    private MaterialCostLine line(RecipeIngredient ingredient, String location) {
+        var stats = priceService.stat(ingredient.item(), location);
+        BigDecimal unitPrice = stats == null ? null : stats.priceByQuality().get(MATERIAL_QUALITY);
+        BigDecimal lineCost = unitPrice == null
+            ? null
+            // Commercial rounding (HALF_UP) per project convention, money scale 2.
+            : unitPrice.multiply(BigDecimal.valueOf(ingredient.count()))
+                .setScale(2, RoundingMode.HALF_UP);
+        return new MaterialCostLine(ingredient.item(), ingredient.count(), unitPrice, lineCost);
+    }
+
+    /** Σ line costs; a single unknown line cost makes the total unknown — never silently 0. */
+    private static BigDecimal total(List<MaterialCostLine> lines) {
         BigDecimal total = BigDecimal.ZERO;
-        for (RecipeIngredient ingredient : recipe.get().ingredients()) {
-            var stats = priceService.stat(ingredient.item(), location);
-            BigDecimal unitPrice = stats == null ? null : stats.priceByQuality().get(MATERIAL_QUALITY);
-            BigDecimal lineCost = unitPrice == null
-                ? null
-                // Commercial rounding (HALF_UP) per project convention, money scale 2.
-                : unitPrice.multiply(BigDecimal.valueOf(ingredient.count()))
-                    .setScale(2, RoundingMode.HALF_UP);
-            lines.add(new MaterialCostLine(ingredient.item(), ingredient.count(), unitPrice, lineCost));
-            if (lineCost == null) {
-                total = null; // one unknown ingredient price → no honest total
-            } else if (total != null) {
-                total = total.add(lineCost);
+        for (MaterialCostLine line : lines) {
+            if (line.lineCost() == null) {
+                return null;
             }
+            total = total.add(line.lineCost());
         }
-        return new MaterialCost(itemId, enchantmentLevel, location, lines, total);
+        return total;
     }
 
     private static boolean matchEnchantment(Recipe r, Integer wanted) {
