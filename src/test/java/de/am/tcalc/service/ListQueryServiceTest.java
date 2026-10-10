@@ -66,6 +66,22 @@ class ListQueryServiceTest {
             .contains("Suppen", "Sicheln", "Gegrillter Fisch");
     }
 
+    /** German collation, not Java string order: umlauts sort in place (Fischer-Order). */
+    @Test
+    void categoriesSortUmlautsAlphabetically() {
+        load();
+        ListQueryService service = service(priceService(0, "0", "0"));
+
+        List<String> categories = List.copyOf(service.categories());
+
+        // 'ä' sorts like 'a' — plain string order would push Fährtensuche BEHIND Fisch
+        assertThat(categories.indexOf("Fackeln")).isLessThan(categories.indexOf("Fährtensuche"));
+        assertThat(categories.indexOf("Fährtensuche")).isLessThan(categories.indexOf("Fisch"));
+        assertThat(categories.indexOf("Hämmer")).isLessThan(categories.indexOf("Häute"));
+        assertThat(categories.subList(0, 4))
+            .containsExactly("Arkanstäbe", "Armbrüste", "Äxte", "Bögen");
+    }
+
     @Test
     void rowsFilterByCategoryAndSubcategorySortByUnitsAndPage() {
         load();

@@ -19,10 +19,12 @@ import de.am.tcalc.domain.ItemPriceStats;
 import de.am.tcalc.domain.Recipe;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -56,9 +58,9 @@ public class ListQueryService {
     private final RecipeService recipeService;
     private final PriceService priceService;
 
-    /** Distinct category (shopSub1) labels, in natural order. */
+    /** Distinct category (shopSub1) labels, in German alphabetical order (umlauts in place). */
     public Set<String> categories() {
-        Set<String> out = new TreeSet<>();
+        Set<String> out = new TreeSet<>(Collator.getInstance(Locale.GERMAN));
         for (Recipe r : recipeService.all()) {
             if (r.shopSub1() != null) {
                 out.add(r.shopSub1());
@@ -72,7 +74,7 @@ public class ListQueryService {
      * Recipes without a subcategory (bags, satchels …) are listed under "Alle" only.
      */
     public Set<String> subcategories(String category) {
-        Set<String> out = new TreeSet<>();
+        Set<String> out = new TreeSet<>(Collator.getInstance(Locale.GERMAN));
         String want = ALL.equals(category) ? null : category;
         for (Recipe r : recipeService.all()) {
             if (r.shopSub2() == null) {
