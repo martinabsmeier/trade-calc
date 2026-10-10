@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-A Spring Boot 3.3.5 (Java 21, Maven) profit calculator for crafted items in Albion Online. The spec is `trade-calc-spec.md` (in German).
+A Spring Boot 4.1.1 (Java 21, Maven) profit calculator for crafted items in Albion Online. The spec is `trade-calc-spec.md` (in German).
 
 **Note:** The codebase is at Phase 6 of the roadmap; only `domain/` (`Recipe`, `RecipeIngredient`), `dataprovider/recipe/RecipeLoader`, and `service/RecipeService` exist. Check `src/main/java` before assuming a class is real.
 

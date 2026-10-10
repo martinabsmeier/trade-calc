@@ -27,7 +27,7 @@ class RecipeServiceTest {
         // Resource loader pointing at the real recipes.json on the classpath.
         RecipeLoader loader = new RecipeLoader(
             new org.springframework.core.io.DefaultResourceLoader(),
-            new com.fasterxml.jackson.databind.ObjectMapper()
+            new tools.jackson.databind.json.JsonMapper()
         );
         loader.load();
 
@@ -50,7 +50,7 @@ class RecipeServiceTest {
         // Ceiling: einmal pro Regeneration grob validieren; Upgrade path: Referenz-Dump pinningen.
         RecipeLoader loader = new RecipeLoader(
             new org.springframework.core.io.DefaultResourceLoader(),
-            new com.fasterxml.jackson.databind.ObjectMapper()
+            new tools.jackson.databind.json.JsonMapper()
         );
         loader.load();
         RecipeService service = new RecipeService(loader);
@@ -62,7 +62,7 @@ class RecipeServiceTest {
     void variantsOfReturnsEmptyForUnknownId() {
         RecipeLoader loader = new RecipeLoader(
             new org.springframework.core.io.DefaultResourceLoader(),
-            new com.fasterxml.jackson.databind.ObjectMapper()
+            new tools.jackson.databind.json.JsonMapper()
         );
         loader.load();
         RecipeService service = new RecipeService(loader);
@@ -75,7 +75,7 @@ class RecipeServiceTest {
     void variantsOfReturnsAllRecipesForCraftableItem() {
         RecipeLoader loader = new RecipeLoader(
             new org.springframework.core.io.DefaultResourceLoader(),
-            new com.fasterxml.jackson.databind.ObjectMapper()
+            new tools.jackson.databind.json.JsonMapper()
         );
         loader.load();
         RecipeService service = new RecipeService(loader);

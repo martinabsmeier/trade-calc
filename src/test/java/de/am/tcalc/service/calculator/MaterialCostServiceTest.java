@@ -38,7 +38,7 @@ class MaterialCostServiceTest {
 
     private final RecipeLoader loader = new RecipeLoader(
         new org.springframework.core.io.DefaultResourceLoader(),
-        new com.fasterxml.jackson.databind.ObjectMapper());
+        new tools.jackson.databind.json.JsonMapper());
 
     @Test
     void longbowCostIsCountTimesUnitPriceOfNormalQuality() {

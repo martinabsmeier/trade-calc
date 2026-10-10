@@ -17,7 +17,7 @@ package de.am.tcalc.dataprovider.recipe;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -37,7 +37,7 @@ class RecipeLoaderTest {
             @Override public ClassLoader getClassLoader() { return Thread.currentThread().getContextClassLoader(); }
         };
 
-        RecipeLoader recipeLoader = new RecipeLoader(loader, new ObjectMapper());
+        RecipeLoader recipeLoader = new RecipeLoader(loader, new JsonMapper());
         assertThatThrownBy(recipeLoader::load).isInstanceOf(IllegalStateException.class);
     }
 }

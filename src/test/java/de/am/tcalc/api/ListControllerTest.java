@@ -37,18 +37,20 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+@ImportAutoConfiguration(org.springframework.boot.cache.autoconfigure.CacheAutoConfiguration.class)
 @WebMvcTest(ListController.class)
 class ListControllerTest {
 
     @Autowired MockMvc mvc;
-    @MockBean ListQueryService listQueryService;
-    @MockBean PriceService priceService;
-    @MockBean MaterialCostService materialCostService;
+    @MockitoBean ListQueryService listQueryService;
+    @MockitoBean PriceService priceService;
+    @MockitoBean MaterialCostService materialCostService;
 
     private final ListRow row = new ListRow(
         "T4_2H_LONGBOW", "Langbogen des Adepten", 4, 0,

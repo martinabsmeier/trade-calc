@@ -30,7 +30,7 @@ class ListQueryServiceTest {
 
     private final RecipeLoader loader = new RecipeLoader(
         new org.springframework.core.io.DefaultResourceLoader(),
-        new com.fasterxml.jackson.databind.ObjectMapper());
+        new tools.jackson.databind.json.JsonMapper());
 
     private void load() {
         loader.load();

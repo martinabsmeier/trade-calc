@@ -12,7 +12,9 @@ Implemented so far:
 - **Recipe book** — 7103 recipes (1656 base + 5447 enchantment variants, T2–T8,
   all five refining chains) in German, loaded at startup from
   `src/main/resources/data/recipes.json`. Lookup via `RecipeService`
-  (`findByItemId`, indexed; `@Cacheable("recipes")`).
+  (`findByItemId`, indexed; `@Cacheable("recipes")`). Runs on
+  **Spring Boot 4.1.1** (Jackson 3, `@MockitoBean` in tests, cache/webmvc
+  starters as explicit modules).
 - **Market price service** — `PriceService` turns the hourly sell history from the
   [Albion Online Data project](https://www.albion-online-data.com/api/) (Europa
   server) into the spec's list-view numbers, in one batched API call per list page:

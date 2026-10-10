@@ -15,8 +15,8 @@
  */
 package de.am.tcalc.dataprovider.recipe;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 import de.am.tcalc.domain.Recipe;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
@@ -41,7 +41,7 @@ public class RecipeLoader {
     static final String CLASSPATH_LOCATION = "classpath:data/recipes.json";
 
     private final ResourceLoader resourceLoader;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     /** Immutable list of recipes, loaded once at construction. */
     private List<Recipe> recipes;

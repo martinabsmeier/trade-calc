@@ -28,8 +28,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Live HTTP access to {@code api/v2/stats/history} on the configured server (Europa by default).
- * Tests bind {@code MockRestServiceServer} to the same {@link RestClient.Builder} Spring Boot
- * provides — this class is never pointed at the real API from tests.
+ * Tests bind {@code MockRestServiceServer} to a {@link RestClient.Builder} and construct the
+ * client via the package-private prebuilt-{@link RestClient} constructor — this class is never
+ * pointed at the real API from tests.
  */
 @Log4j2
 @Component
@@ -41,9 +42,10 @@ public class HttpMarketPriceHistoryClient implements MarketPriceHistoryClient {
     private final RestClient restClient;
     private final PriceProperties properties;
 
+    /** DI constructor — required because the test-seam constructor would otherwise be ambiguous. */
     @Autowired
-    public HttpMarketPriceHistoryClient(RestClient.Builder builder, PriceProperties properties) {
-        this(buildClient(builder, properties), properties);
+    public HttpMarketPriceHistoryClient(PriceProperties properties) {
+        this(buildClient(RestClient.builder(), properties), properties);
     }
 
     /** Test seam: a prebuilt client so {@code MockRestServiceServer}-bound builders stay intact. */
